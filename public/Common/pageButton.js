@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_PageButtonWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_PageButtonWidget = AC.Widgets.WiziCore_UI_PageButtonWidget =  AC.Widgets.WiziCore_UI_ButtonWidget.extend({
     _widgetClass : "WiziCore_UI_PageButtonWidget",
     _input: null,

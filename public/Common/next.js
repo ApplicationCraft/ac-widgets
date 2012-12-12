@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_NextButtonWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_NextButtonWidget = AC.Widgets.WiziCore_UI_NextButtonWidget =  AC.Widgets.WiziCore_UI_ButtonWidget.extend($.extend({}, WiziCore_Methods_Widget_ActionClick, {
     _widgetClass : "WiziCore_UI_NextButtonWidget",
     _dataPropName : "label",
@@ -19,10 +19,12 @@ var WiziCore_UI_NextButtonWidget = AC.Widgets.WiziCore_UI_NextButtonWidget =  AC
     },
 
     onClick: function(ev) {
-        var triggerEvent = new jQuery.Event(AC.Widgets.WiziCore_Widget_Base.onClick);
+        var triggerEvent = new jQuery.Event(AC.Widgets.WiziCore_Widget_Base.onClick),
+            pageJump = this.pageJump(),
+            app = this.form();
         acDebugger.systemLog("triggerEvent", triggerEvent, "self.id()", this.id());
         $(this).trigger(triggerEvent, [ev]);
-        (!triggerEvent.isPropagationStopped()) && this.onActionClick(ev, this.pageJump());
+        (!triggerEvent.isPropagationStopped()) && this.onActionClick(ev, pageJump, app);
         ev.stopPropagation();
     },
 

@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_SubmitButtonMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_SubmitButtonMobileWidget = AC.Widgets.WiziCore_UI_SubmitButtonMobileWidget =  AC.Widgets.WiziCore_UI_ButtonMobileWidget.extend({
     _widgetClass: "WiziCore_UI_SubmitButtonMobileWidget",
     /**
@@ -27,24 +27,28 @@ var WiziCore_UI_SubmitButtonMobileWidget = AC.Widgets.WiziCore_UI_SubmitButtonMo
      * On click event
      */
     onClick: function(ev) {
-        var triggerEvent = new jQuery.Event(AC.Widgets.Base.onClick);
-        debuger.systemLog("triggerEvent", triggerEvent, "self.id()", this.id());
-        $(this).trigger(triggerEvent, [ev]);
-        if (triggerEvent.isPropagationStopped()) {
-            return;
-        }
-        var act = this.action();
-        var val = (typeof act == "object") ? act.value : act;
-        switch (val) {
-            case "submit_create":
-            case "submit_save":
-                var createInstance = (val == "submit_create");
-                this.form().submitCurrentInstance(createInstance);
-                break;
-            default:
-                break;
-        }
-        ev.stopPropagation();
+        this._updateButtonViewOnClick();
+        var self = this;
+        setTimeout(function(){
+            var triggerEvent = new jQuery.Event(AC.Widgets.Base.onClick);
+            debuger.systemLog("triggerEvent", triggerEvent, "self.id()", self.id());
+            $(self).trigger(triggerEvent, [ev]);
+            if (triggerEvent.isPropagationStopped()) {
+                return;
+            }
+            var act = self.action();
+            var val = (typeof act == "object") ? act.value : act;
+            switch (val) {
+                case "submit_create":
+                case "submit_save":
+                    var createInstance = (val == "submit_create");
+                    self.form().submitCurrentInstance(createInstance);
+                    break;
+                default:
+                    break;
+            }
+            ev.stopPropagation();
+        },30);
     }
 
 });

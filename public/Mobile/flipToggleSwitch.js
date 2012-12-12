@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_FlipToggleSwitchMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
 var WiziCore_UI_FlipToggleSwitchMobileWidget = AC.Widgets.WiziCore_UI_FlipToggleSwitchMobileWidget =  AC.Widgets.WiziCore_UI_BaseMobileWidget.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple, {
     _widgetClass: "WiziCore_UI_FlipToggleSwitchMobileWidget",
@@ -32,6 +32,9 @@ var WiziCore_UI_FlipToggleSwitchMobileWidget = AC.Widgets.WiziCore_UI_FlipToggle
     },
 
     _redraw: function() {
+        if (!this._cnt)
+            return;
+
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
         this._cnt.empty();
@@ -74,7 +77,7 @@ var WiziCore_UI_FlipToggleSwitchMobileWidget = AC.Widgets.WiziCore_UI_FlipToggle
     _enable: function(val){
         if (this._slider){
             val = (val === true) ? "enable" : "disable";
-            this._slider.mobileSlider(val);
+            this._slider.data("mobileSlider") && this._slider.mobileSlider(val);
         }
     },
 
@@ -84,9 +87,8 @@ var WiziCore_UI_FlipToggleSwitchMobileWidget = AC.Widgets.WiziCore_UI_FlipToggle
         this._tabindex(this.tabindex());
     },
 
-    destroy: function() {
-        $(this._slider).unbind('change');
-        this._super();
+    onDestroy: function() {
+        this._slider && $(this._slider).unbind('change');
     },
 
     onChange: function(val) {
@@ -163,6 +165,10 @@ var WiziCore_UI_FlipToggleSwitchMobileWidget = AC.Widgets.WiziCore_UI_FlipToggle
         this.refresh();
     },
 
+    _shadow: function(val){
+        this._super(val, this._slider.next());
+    },
+
     _onInitLanguage: function() {
         this.labelOn(this.labelOn());
         this.labelOff(this.labelOff());
@@ -231,7 +237,7 @@ var WiziCore_UI_FlipToggleSwitchMobileWidget = AC.Widgets.WiziCore_UI_FlipToggle
 
     refresh: function() {
         if (this._isDrawn) {
-            this._slider.mobileSlider('refresh');
+            this._slider.data("mobileSlider") && this._slider.mobileSlider('refresh');
         }
     },
 

@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_AuthButtonMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_AuthButtonMobileWidget = AC.Widgets.WiziCore_UI_AuthButtonMobileWidget = AC.Widgets.WiziCore_UI_ButtonMobileWidget.extend($.extend({}, WiziCore_SignInUp, {
     _widgetClass : "WiziCore_UI_AuthButtonMobileWidget",
     _theme: "c",
@@ -78,18 +78,24 @@ var WiziCore_UI_AuthButtonMobileWidget = AC.Widgets.WiziCore_UI_AuthButtonMobile
      * On click event
      */
     onClick : function(ev) {
-        var triggerEvent = new jQuery.Event(AC.Widgets.Base.onClick);
-        $(this).trigger(triggerEvent, [ev]);
-        if (!triggerEvent.isPropagationStopped()){
-            if (this.action() == 'signup') {
-                this.signUpClick();
+        this._updateButtonViewOnClick();
+        var self = this,
+            app = this.form(),
+            action = self.action();
+        setTimeout(function(){
+            var triggerEvent = new jQuery.Event(AC.Widgets.Base.onClick);
+            $(self).trigger(triggerEvent, [ev]);
+            if (!triggerEvent.isPropagationStopped() && !app.isDestroyed()){
+                if (action == 'signup') {
+                    self.signUpClick();
+                }
+                else {
+                    self.signInClick();
+                }
             }
-            else {
-                this.signInClick();
-            }
-        }
-        ev.stopPropagation();
-//        ev.preventDefault();
+            ev.stopPropagation();
+    //        ev.preventDefault();
+        },30);
     }
 }));
 

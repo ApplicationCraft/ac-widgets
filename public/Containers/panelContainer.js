@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_PanelContainerWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_PanelContainerWidget = AC.Widgets.WiziCore_UI_PanelContainerWidget =  AC.Widgets.WiziCore_Widget_Container.extend($.extend({}, WiziCore_ContainerDataBind, WiziCore_WidgetAbstract_DataIntegrationContainer, {
     _widgetClass : "WiziCore_UI_PanelContainerWidget",
 
@@ -19,6 +19,7 @@ var WiziCore_UI_PanelContainerWidget = AC.Widgets.WiziCore_UI_PanelContainerWidg
 
     draw : function() {
         this._super.apply(this, arguments);
+        this.base().addClass("ac-widget-overflow-border-radius");
         this.initAdaptiveLayout();
     },
 
@@ -31,10 +32,9 @@ var WiziCore_UI_PanelContainerWidget = AC.Widgets.WiziCore_UI_PanelContainerWidg
         }
     },
 
-    destroy: function() {
+    onDestroy: function() {
         if (this._adaptiveLayout)
             this._adaptiveLayout.unsetAdaptiveLayout();
-        this._super();
     },
 
     _updateAdaptiveLayout: function(value) {
@@ -172,7 +172,8 @@ var _props = [
         AC.Property.layout.zindex,
         AC.Property.layout.anchors,
         AC.Property.layout.alignInContainer,
-        AC.Property.layout.repeat
+        AC.Property.layout.repeat,
+        AC.Property.layout.scrolling
     ]},
     { name: AC.Property.group_names.behavior, props:[
         AC.Property.behavior.dragAndDrop,
@@ -234,6 +235,7 @@ WiziCore_UI_PanelContainerWidget.capabilities = function() {
             pWidth: "",
             dragAndDrop: false, resizing: false,
             layout: 'absolute',
+            scrolling: "none",
             shadow : ""
         },
         emptyProps: {bgColor : "#f7f7f7", border : "1px solid gray", borderRadius : "0"},

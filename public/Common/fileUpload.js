@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_FileUploadWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_FileUploadWidget = AC.Widgets.WiziCore_UI_FileUploadWidget =  AC.Widgets.Base.extend({
     _widgetClass: "WiziCore_UI_FileUploadWidget",
     _uploadBtn: null,
@@ -83,14 +83,14 @@ var WiziCore_UI_FileUploadWidget = AC.Widgets.WiziCore_UI_FileUploadWidget =  AC
 
         btn.find(".waFileUploadBtnWidgetFile")
             .click(function(ev){
-                if (self.enable() === false || self.readonly() === true){
+                if (self.enable() === false || self._isParentEnable() === false){
                     ev.stopPropagation();
                     ev.originalEvent.preventDefault();
                 }
             })
             .change(function() {
                 var filename = $(this).val();
-                if (filename == '' || self.enable() === false || self.readonly() === true) return;
+                if (filename == '' || self.enable() === false) return;
                 filename = filename.match(/[^\\]*$/)[0];
                 if (self.checkByFileType(filename)) {
                     self.sendFile(filename , action, requestId);
@@ -248,7 +248,6 @@ var WiziCore_UI_FileUploadWidget = AC.Widgets.WiziCore_UI_FileUploadWidget =  AC
         this.opacity = this.themeProperty('opacity', this._opacity);
         this.tabindex = this.htmlProperty('tabindex', this._tabindex);
         this.enable = this.htmlProperty('enable', this._enable);
-        this.readonly = this.normalProperty('readonly', this._readonly);
     },
 
     initDomState: function() {
@@ -274,7 +273,6 @@ var WiziCore_UI_FileUploadWidget = AC.Widgets.WiziCore_UI_FileUploadWidget =  AC
         this._btnWidth(this.btnWidth());
 
         this._updateEnable();
-        this._updateReadonly();
         this._visible(this.visible());
         this._opacity(this.opacity());
         this._tabindex(this.tabindex());
@@ -291,16 +289,14 @@ var WiziCore_UI_FileUploadWidget = AC.Widgets.WiziCore_UI_FileUploadWidget =  AC
 
     _enable: function(flag){
         //enable/disable buttons and text
-        this.showEnableDiv(flag);
-    },
-
-    _readonly: function(flag){
-        if (flag === true){
+        if (flag !== true){
             this.base().find("input[type='button']").attr("disabled", "disabled");
         } else {
             this.base().find("input[type='button']").removeAttr("disabled");
         }
     },
+
+    readonly: function(flag){},
 
     fillFileNameField: function() {
         var span = this._fileNameField.children("span").empty();
@@ -639,6 +635,9 @@ var WiziCore_UI_FileUploadWidget = AC.Widgets.WiziCore_UI_FileUploadWidget =  AC
     },
 
     _attachText: function(val) {
+        if (!this._uploadBtn)
+            return;
+
         var trVal = WiziCore_Helper.isLngToken(val) ? this._getTranslatedValue(val) : val;
 
         if (trVal != undefined) {
@@ -664,6 +663,9 @@ var WiziCore_UI_FileUploadWidget = AC.Widgets.WiziCore_UI_FileUploadWidget =  AC
     },
 
     _stopText: function(val) {
+        if (!this._uploadBtn)
+            return;
+
         var text = WiziCore_Helper.isLngToken(val) ? this._getTranslatedValue(val) : val;
 
         if (text != undefined) {
@@ -880,8 +882,7 @@ var _props = [{name: AC.Property.group_names.general, props:[
             AC.Property.behavior.dragAndDrop,
             AC.Property.behavior.resizing,
             AC.Property.behavior.visible,
-            AC.Property.behavior.enable,
-            AC.Property.behavior.readonly
+            AC.Property.behavior.enable
         ]},
     {name: AC.Property.group_names.style, props:[
             AC.Property.behavior.opacity,
@@ -937,8 +938,7 @@ WiziCore_UI_FileUploadWidget.props = function() {
             displayHourglassOver: "inherit", customCssClasses: "",
             fileName: '',
             enable: true,
-            dragAndDrop: false, resizing: false,
-            readonly: false
+            dragAndDrop: false, resizing: false
         },
 
         emptyProps: {bgColor: "", fontColor: "", font:"", border:"", borderRadius:"0", btnFont: "", btnColor: "", btnBgColor: "", btnBorder: "", btnBorderRadius: ""},

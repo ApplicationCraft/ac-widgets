@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ImgQrCodeWidget = AC.Widgets.WiziCore_UI_ImgQrCodeWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple, WiziCore_Methods_Widget_ActionClick, {
     _widgetClass : "WiziCore_UI_ImgQrCodeWidget",
     _image: null,
@@ -220,7 +220,6 @@ var WiziCore_UI_ImgQrCodeWidget = AC.Widgets.WiziCore_UI_ImgQrCodeWidget =  AC.W
         this._super();
         this.initDomStatePos();
 
-        //this._updateEnable();
         this._visible(this.visible());
         this._opacity(this.opacity());
         this._shadow(this.shadow());
@@ -232,6 +231,7 @@ var WiziCore_UI_ImgQrCodeWidget = AC.Widgets.WiziCore_UI_ImgQrCodeWidget =  AC.W
         this._font(this.font());
         this._urlMargin(this.urlMargin());
         this._textAlign(this.textAlign() );
+        this._updateEnable();
 //        this._updateLayout();
     },
 
@@ -245,7 +245,17 @@ var WiziCore_UI_ImgQrCodeWidget = AC.Widgets.WiziCore_UI_ImgQrCodeWidget =  AC.W
     },
 
     _enable: function(flag) {
+        if (flag === false) {
+            this.base().addClass('ui-state-disabled');
+            if (this._link)
+                this._link.find("a").addClass('wa-disable-cursor');
+        } else {
+            this.base().removeClass('ui-state-disabled');
+            if (this._link)
+                this._link.find("a").removeClass('wa-disable-cursor');
 
+        }
+        this.updateCursorByAction(flag === true);
     },
 
     /**
@@ -253,7 +263,7 @@ var WiziCore_UI_ImgQrCodeWidget = AC.Widgets.WiziCore_UI_ImgQrCodeWidget =  AC.W
      * On click event
      */
     onClick : function(ev) {
-        if (this.enable() === false){
+        if (this.enable() === false || this._isParentEnable() === false){
             return;
         }
         var triggerEvent = new jQuery.Event(AC.Widgets.Base.onClick);
@@ -287,7 +297,7 @@ var WiziCore_UI_ImgQrCodeWidget = AC.Widgets.WiziCore_UI_ImgQrCodeWidget =  AC.W
         }
         if (!self.base().is(':visible')){
             this._timeout = setTimeout(function(){
-                if (self.base().is(':visible')){
+                if (self.base().is(':visible') && self.form() && !self.form().isDestroyed()){
                     updateText();
                     clearTimeout(self._timeout);
                 }

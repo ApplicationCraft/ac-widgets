@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_PopupDropdownMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
     function findOption(target) {
         return $(target).closest('.ac-list-item');
@@ -11,7 +11,7 @@
         var option = findOption(ev.target);
         if (option.length > 0) {
             var widget = option.data("widget");
-            widget && widget.enable() !== false && widget.onItemSelected.call(widget, option, ev);
+            widget && widget.enable() !== false && widget._isParentEnable() !== false && widget.onItemSelected.call(widget, option, ev);
         }
 
     }
@@ -22,9 +22,11 @@
         bindSelectEvent = null;
     }
 
-    var WiziCore_UI_ListMobileWidget = AC.Widgets.WiziCore_UI_ListMobileWidget = AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.extend($.extend({}, WiziCore_Methods_Widget_ActionClick, WiziCore_WidgetAbstract_DataIntegrationAssocArray, {
+    var WiziCore_UI_ListMobileWidget = AC.Widgets.WiziCore_UI_ListMobileWidget = AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.extend($.extend({}, WiziCore_Methods_Widget_ActionClick, WiziCore_WidgetAbstract_DataIntegrationAssocArrayWithFiltering, {
         _widgetClass:"WiziCore_UI_ListMobileWidget",
         _select:null,
+        _needUpdateSelection: true,
+        _filterVal: "",
         /**
          * Description of constructor
          * @class       Some words about popup dropdown mobile widget class
@@ -58,9 +60,35 @@
             this.splitTheme = this.themeProperty('splitTheme', this._redraw);
             this.countTheme = this.themeProperty('countTheme', this._redraw);
             this.highlightSelected = this.normalProperty('highlightSelected');
+            this.filterData = this.normalProperty('filterData');
+            this.filterPlaceholder = this.htmlLngPropertyBeforeSet('filterPlaceholder', this._filterPlaceholderBefore, this._filterPlaceholderAfter);
 //        this.selectionTheme = this.normalProperty('selectionTheme');
-            this.value = this.htmlPropertyBeforeSet('value', this._filterValue, this._value);
+            this.value = this.htmlPropertyBeforeSetAfterGet('value', this._filterValue, this._value, this._valueAfter);
             this.wrap = this.htmlProperty('wrap', this._redraw);
+        },
+
+        _onInitLanguage: function() {
+            this._super.apply(this, arguments);
+            this.filterPlaceholder(this.filterPlaceholder());
+        },
+
+        _filterPlaceholderBefore: function(val) {
+            if (this.form().language() != null && !this.form()._skipTokenCreation) {
+                var isToken = WiziCore_Helper.isLngToken(val),
+                    token = isToken ? val : ('ac-' + this.id() + '-ph');
+
+                if (!isToken)
+                    this.form().addTokenToStringTable(this.id(), this.name(), token, val);
+
+                return token;
+            } else
+                return val;
+        },
+
+        _filterPlaceholderAfter: function(val) {
+            if (this._select) {
+                this._redraw();
+            }
         },
 
         _redraw:function () {
@@ -105,7 +133,7 @@
             var isValueToken = WiziCore_Helper.isLngToken(data[index][param]),
                 token, hasToken;
             if (!isValueToken) {
-                hasToken = (id != null) && oldData && WiziCore_Helper.isLngToken(oldData[id][param]);
+                hasToken = (id != null) && oldData && oldData[id] && WiziCore_Helper.isLngToken(oldData[id][param]);
                 if (hasToken)
                     token = oldData[id][param];
                 else
@@ -131,11 +159,14 @@
         },
 
         _data:function (val) {
+            if (!this._mainCnt)
+                return;
 
             var trState = jQuery.fn.__useTr ;
             jQuery.fn.__useTr = false;
 
             val && (val = WiziCore_Helper.clone(val));
+
 
             if (this._div != undefined) {
                 this._div.empty().remove();
@@ -154,7 +185,7 @@
                 useCount = this.useCount(),
                 readOnly = this.readOnlyList(),
                 useAside = this.useAside(),
-                self = this;
+                self = this, i;
                 //wrap = this.wrap(),
             label.attr("for", selectId);
             select.attr("name", selectId);
@@ -164,7 +195,22 @@
             select.data("split-theme", this.splitTheme());
 
             if (val){
-                var i = 0, l = val.length;
+                if (this.filterData() && this.view() == undefined){
+                    var filteredData = [], filterItem;
+                    for (i = 0; i < val.length; i++){
+                        filterItem = val[i];
+                        if ((filterItem["label"]).toLowerCase().indexOf(this._filterVal) != -1){
+                            filterItem.userData = undefined;
+                            filteredData.push(val[i]);
+                        }
+                    }
+                    val = filteredData;
+                }
+            }
+
+            if (val){
+                i = 0;
+                var l = val.length;
                 if (this._isDataManual != undefined) {
                     var res = this._getStartAndLength(l);
                     i = res.i;
@@ -172,9 +218,8 @@
                 }
                 for (; i < l; i++) {
                     var item = val[i],
-    //            var optionValue = (this.htmlLabel())? "<p>" + item['label'] + "</p>": WiziCore_Helper.escapeHTMLtags("" + item['label']);
                         labelValue = WiziCore_Helper.isLngToken(item['label']) ? this._getTranslatedValue(item['label']) : item['label'],
-                        optionValue = (this.htmlLabel()) ? labelValue : '<h3 class="m-ui-li-heading">' + WiziCore_Helper.escapeHTMLtags("" + labelValue) + '</h3>',
+                        optionValue = (this.htmlLabel()) ? labelValue : WiziCore_Helper.escapeHTMLtags("" + labelValue),
                         option = $("<li>"),
                         a,
                         isDivider = (item['divider'] === true || item['divider'] == "1");
@@ -226,14 +271,39 @@
             }
             if (this.useFilter()) {
                 select.data('filter', 'true');
+                var placeHolderToken = this._project['filterPlaceholder'];
+                var trVal = WiziCore_Helper.isLngToken(placeHolderToken) ? this._getTranslatedValue(placeHolderToken) : placeHolderToken;
+                select.data('filterPlaceholder', trVal);
+            }
+
+            select.data("filterDataCallback", function(value, listview){
+                var searchValue = '%' + value + '%';
+                if (self.view() != undefined) {
+                    if (self._request !== null) {
+                        var field = self.fields()[0].value.replace(/[{}]/g,"");
+                        self._filterData = "(UPPER({" + field + "})) LIKE (UPPER('" + searchValue + "'))";
+                        self._filterVal = value;
+                        self.reloadDataIntegrationData();
+                    }
+                } else {
+                    self._filterVal = value;
+                    self.updateFilterData(value);
+                }
+            });
+
+            if (this.filterData() == true){
+                select.data("filterData", true);
+                select.data("filterValue", this._filterVal);
             }
             div.append(label);
             div.append(select);
             this._mainCnt.append(this._div);
             this._select = select;
+//            this._filterPlaceholderAfter(this._project['filterPlaceholder']);
             if (this._isDrawn) {
                 this._refresh();
             }
+            this.$itemsWithoutDivider = this._select.find('li:not(li[role="heading"])');
             var value = this.value();
             if (value !== undefined) {
                 this._value(value);
@@ -242,6 +312,7 @@
                 bindSelectEvent();
             }
             this.unhighlightWidget();
+            this._updateEnable();
             this._super();
             jQuery.fn.__useTr = trState;
         },
@@ -267,33 +338,63 @@
                 this.selectItemValue(value.value);
         },
 
-        onItemSelected:function ($btn, ev) {
-            var theme = $btn.attr("data-" + $.mobile.ns + "theme");
-            $btn.removeClass("m-ui-btn-up-" + theme).addClass("m-ui-btn-down-" + theme);
-            var optionValue = $btn.data('optionValue'),
-                i = $btn.data('pos');
-            this.value(optionValue);
-            var self = this;
-            setTimeout(function () {
-                var res = self.onItemClick.call(self, optionValue, i);
-                if (optionValue.action && res !== false) {
-                    self.onActionClick(ev, optionValue.action);
+        _valueAfter: function(value) {
+            var res = null,
+                data = this.data();
+
+            if ($.isArray(data) && value && value.value != undefined) {
+                for (var i = 0, l = data.length; i < l; i++) {
+                    if (data[i].value == value.value && (data[i].divider == false || data[i].divider == null)) {
+                        res = data[i];
+                        break;
+                    }
                 }
+            }
+            return res;
+        },
+
+        _shadow: function(val){
+            this._super(val, this._select);
+        },
+
+        onItemSelected:function ($btn, ev) {
+            var theme = $btn.attr("data-" + $.mobile.ns + "theme"),
+                optionValue = $btn.data('optionValue'),
+                i = $btn.data('pos'),
+                self = this,
+                oldValue = self.value();
+
+            this._needUpdateSelection = false;
+            this.value(optionValue);
+            this._needUpdateSelection = true;
+            $btn.removeClass("m-ui-btn-up-" + theme).addClass("m-ui-btn-down-" + theme);
+
+            //setTimeout(function () {
+                var isPropagationStopped = self.onItemClick.call(self, optionValue, i);
+                if (isPropagationStopped) {
+                    if (oldValue === undefined) {
+                        oldValue = null;  //to set empty value, otherwise - will be getter
+                    }
+                    self.value(oldValue, true);
+                } else {
+                    (optionValue.action) && self.onActionClick(ev, optionValue.action, this.form());
+                    self._updateSelection(i);
+                }
+
                 setTimeout(function () {
                     $btn.removeClass("m-ui-btn-down-" + theme).addClass("m-ui-btn-up-" + theme);
-                }, 200)
-                self._updateSelection(i);
+                }, 200);
                 ev.stopPropagation();
-            }, 1);
+            //}, 50);
         },
 
         _updateSelection:function (pos) {
-            if (!this.highlightSelected()) {
+            if (!this.highlightSelected() || !this._needUpdateSelection) {
                 return;
             }
             var theme = this.mobileTheme(),
                 remove = 'm-ui-btn-up-' + theme + '  m-ui-btn-active-' + theme;
-            this._select.find('li:not(li[role="heading"])') //select without divider
+            this.$itemsWithoutDivider //select without divider
                 .removeClass(remove)
                 .addClass('m-ui-btn-up-' + theme);
             if (pos != null) {
@@ -307,6 +408,7 @@
         selectItemValue:function (value) {
             var i, length,
                 data = this.data();
+
             if ($.isArray(data)) {
                 for (i = 0, length = data.length; i < length; ++i) {
                     if (data[i].value == value && (data[i].divider == false || data[i].divider == null)) {
@@ -323,10 +425,11 @@
         },
 
         onItemClick:function (val, i) {
-            this.sendDrillDown(val);
             var triggerEvent = new $.Event(WiziCore_UI_ListMobileWidget.onClick);
             $(this).trigger(triggerEvent, [val, i]);
-            return  triggerEvent.returnValue;
+            var isPropagationStopped =triggerEvent.isPropagationStopped();
+            (!isPropagationStopped) && this.sendDrillDown(val);
+            return isPropagationStopped;
         },
 
         onPageDrawn:function () {
@@ -359,10 +462,27 @@
             }
         },
 
+        updateFilterData: function(){
+            var self = this;
+            if (this._isDrawn) {
+                this.loadMode(true);
+                setTimeout(function(){ //without settimeout we break jquery =(
+                    self._data(self.data());
+                    self.loadMode(false);
+                }, 0);
+            }
+        },
+
         _enable:function (val) {
             if (this._div) {
-                val = (val === true) ? "enable" : "disable";
-                this._div.find('ol,ul').listview(val);
+                var input = this._div.find('.m-ui-input-search > input'),
+                    method = (val === true) ? "enable" : "disable";
+
+                this._div.find('ol,ul').listview(method);
+                (val !== true) ? this._div.find('li').addClass('wa-disable-cursor') : this._div.find('li').removeClass('wa-disable-cursor');
+
+                if (this.useFilter() && input.length != 0)
+                    input.textinput(method);
             }
         },
 
@@ -409,6 +529,24 @@
         setFocus:function () {
             if (this._isDrawn && this.mode() != WiziCore_Visualizer.EDITOR_MODE) {
                 this.base().find('a').first().focus();
+            }
+        },
+
+        filterListData: function(){
+            if (this.filterData() == true) {
+                var f = this.filter();
+                var d = [];
+                if (typeof this._filterData == "string"){
+                    d.push(this._filterData);
+                }
+                if (f){
+                    for (var i = 0; i < f.length; i++){
+                        d.push(f[i]);
+                    }
+                }
+                return d;
+            } else {
+                return this.filter();
             }
         },
 
@@ -484,7 +622,7 @@
             currPage:1,
             opacity:1,
             elementsPerPage:WiziCore_Source_Widget_PagingAPI.DEFAULT_ELEMENTS_PER_PAGE,
-            wrap:false
+            wrap:false, filterPlaceholder: "Filter items..."
 
         };
     };
@@ -505,7 +643,8 @@
             AC.Property.general.elementsPerPage,
             AC.Property.general.currPage,
             AC.Property.general.assocData,
-            {name:"highlightSelected", type:"boolean", set:"highlightSelected", get:"highlightSelected", alias:"widget_highlightSelected"}
+            {name:"highlightSelected", type:"boolean", set:"highlightSelected", get:"highlightSelected", alias:"widget_highlightSelected"},
+            {name:"filterPlaceholder", type:"text", set:"filterPlaceholder", get:"filterPlaceholder", alias:"widget_filterPlaceholder"}
         ]},
         { name:AC.Property.group_names.database, props:[
             AC.Property.database.isIncludedInSchema,
@@ -545,7 +684,8 @@
             AC.Property.data.applyview,
             AC.Property.data.listenview,
             AC.Property.data.resetfilter,
-            AC.Property.data.autoLoad
+            AC.Property.data.autoLoad,
+            {name: "filterData", "type": "boolean", set:"filterData", get: "filterData", alias: "widget_filter_data"}
         ]},
         { name:AC.Property.group_names.style, props:[
             AC.Property.behavior.opacity,

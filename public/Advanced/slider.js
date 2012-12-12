@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_SliderWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_SliderWidget = AC.Widgets.WiziCore_UI_SliderWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationInterval ,{
     _widgetClass: "WiziCore_UI_SliderWidget",
     _padding: null,
@@ -101,12 +101,11 @@ var WiziCore_UI_SliderWidget = AC.Widgets.WiziCore_UI_SliderWidget =  AC.Widgets
         }
     },
 
-    remove: function() {
+    onRemove: function() {
         if (this._checkRepeatBeforeRemove()){
             return;
         }
         $(this._slider).unbind("slidechange.widget", self.onChange);
-        this._super.apply(this, arguments);
     },
 
     isInterval: function() {
@@ -422,7 +421,7 @@ var WiziCore_UI_SliderWidget = AC.Widgets.WiziCore_UI_SliderWidget =  AC.Widgets
     },
 
     initSlider: function() {
-        this._slider.slider('destroy');
+        this._slider.data("slider") && this._slider.slider('destroy');
         var self = this;
         var params = {orientation: this.orientation().toLowerCase()};
         if (this.range() != "") {
@@ -455,15 +454,27 @@ var WiziCore_UI_SliderWidget = AC.Widgets.WiziCore_UI_SliderWidget =  AC.Widgets
         });
         var clicked = false;
         aHref.mousedown(function(){
+            if (!self.enable() || !self._isParentEnable())
+                return;
+
             aHref.css("background", self.hoverColor());
             clicked = true;
         }).hover(function() {
+            if (!self.enable() || !self._isParentEnable())
+                return;
+
             if (!clicked)
-                $(this).css("background", self.hoverColor());
+            $(this).css("background", self.hoverColor());
         }, function() {
+            if (!self.enable() || !self._isParentEnable())
+                return;
+
             if (!clicked)
-                $(this).css("background", self.defaultColor());
+            $(this).css("background", self.defaultColor());
         }).mouseup(function(){
+            if (!self.enable() || !self._isParentEnable())
+                return;
+
             clicked = false;
             aHref.css("background", self.defaultColor());
         });

@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
     // This top section should always be present
     var widget = AC.Widgets.HTML5Audio = function() {
@@ -11,7 +11,7 @@
     p._widgetClass = "HTML5Audio";
     p._playerType = "audio";
 
-    var actions = $.extend({}, AC.Widgets.HTML5MediaBase.actions(), actions);
+    var actions = $.extend({}, AC.Widgets.HTML5MediaBase.actions());
 
     // The following lines are required
 
@@ -64,13 +64,14 @@
         { name: AC.Property.group_names.style, props:[
             AC.Property.behavior.opacity,
             AC.Property.style.margin,
-            AC.Property.style.border,
-            AC.Property.style.bgColor
+            AC.Property.style.bgColor,
+            AC.Property.style.customCssClasses,
+            AC.Property.style.widgetStyle
         ]}],
         defaultProps = {width: "240", height: "30", x : "100", y: "100", zindex : "auto", margin: "", alignInContainer: 'left', pWidth: "",
             anchors : {left: true, top: true, bottom: false, right: false}, visible : true,
             opacity : 0.8, bgColor: "#000000", name: "HTML5Audio", data:[], enable: true, resizing: false,
-            autoplay: false, preload:false, volume: 0.8, controls: true, source: []
+            autoplay: false, preload:false, volume: 0.8, controls: true, source: [], widgetStyle: "default", customCssClasses: ""
         },
         lng = jQuery.extend(true, {'en': {widget_name_html5mediaelementaudio: "HTML5 Audio"}}, AC.Widgets.HTML5MediaBase.langs());
 

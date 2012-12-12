@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_RadioWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_RadioWidget = AC.Widgets.WiziCore_UI_RadioWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple ,{
     _widgetClass: "WiziCore_UI_RadioWidget",
     _input: null,
@@ -42,7 +42,7 @@ var WiziCore_UI_RadioWidget = AC.Widgets.WiziCore_UI_RadioWidget =  AC.Widgets.B
         input.attr("id", tuid + "_input");
         label.append(input);
 
-        label.click(function(){
+        div.bind('click', function(){
             var isDisabled = input.attr("disabled");
             if (!input.is(":checked") && (isDisabled === undefined || isDisabled === false)){
                 self._checked(!input.is(":checked"));
@@ -59,6 +59,7 @@ var WiziCore_UI_RadioWidget = AC.Widgets.WiziCore_UI_RadioWidget =  AC.Widgets.B
 
         this._div = div;
         this.base().prepend(div);
+        this.base().css("overflow", "hidden");
 
         var self = this;
         this._input.bind("change", function() {
@@ -139,11 +140,15 @@ var WiziCore_UI_RadioWidget = AC.Widgets.WiziCore_UI_RadioWidget =  AC.Widgets.B
         }
     },
 
-    destroy: function() {
-        if (this._input != null){
-            this._input.unbind("click");    
+    onRemove: function() {
+        if (this._div != null){
+            this._div.unbind("click");
         }
-        this._super();
+
+        if (this._input != null){
+            this._input.unbind("change");
+            this._input.unbind(WiziCore_UI_RadioWidget.onCallByNames);
+        }
     },
 
     setFocus: function(){
@@ -152,7 +157,7 @@ var WiziCore_UI_RadioWidget = AC.Widgets.WiziCore_UI_RadioWidget =  AC.Widgets.B
         }
     },
 
-    onChange: function(needUpdateValue) {
+    onChange: function() {
         var triggerEvent = new $.Event(WiziCore_UI_RadioWidget.onChange);
         var oldVal = this.checked();
         var val = this._input.is(":checked");
@@ -217,7 +222,8 @@ var WiziCore_UI_RadioWidget = AC.Widgets.WiziCore_UI_RadioWidget =  AC.Widgets.B
     },
 
     _checked: function(flag) {
-        var checkboxElement = this._input
+        var checkboxElement = this._input;
+
         if (flag == true || flag == "checked"){
             checkboxElement.attr('checked', true);
         } else if (flag == false){
@@ -274,7 +280,7 @@ WiziCore_UI_RadioWidget.inlineEditPropName = function() {
  */
 WiziCore_UI_RadioWidget.actions = function() {
     var ret = {
-        onChange: {alias: "widget_event_onchange", funcview: "onChange", action: "WiziCore_UI_RadioWidget.onChange", params: "newValue, oldValue", group: "widget_event_general"},
+        onChange: {alias: "widget_event_onchange", funcview: "onChange", action: "AC.Widgets.WiziCore_UI_RadioWidget.onChange", params: "newValue, oldValue", group: "widget_event_general"},
         dataLoaded : {alias : "widget_event_ondataloaded", funcview : "onDataLoaded", action : "AC.Widgets.Base.onDataLoaded", params : "error, data", group : "widget_event_data", sweight : 5},
         dataReset : {alias : "widget_event_ondatareset", funcview : "onDataReset", action : "AC.Widgets.Base.onDataReset", params : "", group : "widget_event_data"}
     };
@@ -351,15 +357,14 @@ WiziCore_UI_RadioWidget.isField = function() { return true};
  * @return {Object} default properties
  */
 WiziCore_UI_RadioWidget.emptyProps = function() {
-    var ret = {bgColor: "", fontColor: "black", font: "normal 12px verdana"};
-    return ret;
+    return {bgColor: "", fontColor: "black", font: "normal 12px verdana"};
 };
 /**
  * Return default widget prop
  * @return {Object} default properties
  */
 WiziCore_UI_RadioWidget.defaultProps = function() {
-    var ret = {
+    return {
         pWidth: "",
         margin: "", alignInContainer: 'left',
         hourglassImage: "Default",
@@ -381,6 +386,5 @@ WiziCore_UI_RadioWidget.defaultProps = function() {
         widgetStyle: "default",
         name: "radio1"
     };
-    return ret;
 };
 })(jQuery,window,document);

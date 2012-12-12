@@ -74,6 +74,9 @@
                 w2 = Math.round(width / 2),
                 w1 = w2 * 2;
 
+            var defaultColorStyle = 'background-color:' + color1 + ';';
+            var defaultHoverStyle = 'background-color:' + hover1 + ';';
+
             if (!s.image) {
                 // Shape styles
                 switch (s.shape) {
@@ -128,33 +131,33 @@
                         e.addClass('fancy-ios fancy-ios-w');
                         var x = Math.sqrt(height * height / 2) + 1;
                         style1 += 'border-color:' + border + ';margin-left:' + (height / 2) + 'px;';
-                        after += 'height:' + x + 'px;width:' + x + 'px;left:-' + (height * 0.3125) + 'px;top:' + ((height - x) / 2 - 1.7) + 'px;border-color:' + border + ';';
+                        after += 'height:' + (x-1) + 'px;width:' + x + 'px;left:-' + (height * 0.3125) + 'px;top:' + ((height - x) / 2 - 1.7) + 'px;border-color:' + border + ';';
 
                         after += 'background-image:-webkit-gradient(linear, 0 0, 100% 100%, from(' + color1 + '), to(' + color2 + '));';
                         afterHover  += 'background-image:-webkit-gradient(linear, 0 0, 100% 100%, from(' + hover1 + '), to(' + hover2 + '));';
                         pressedAfter  += 'background-image:-webkit-gradient(linear, 0 0, 100% 100%, from(' + color2 + '), to(' + color1 + '));';
                         pressedHoverAfter  += 'background-image:-webkit-gradient(linear, 0 0, 100% 100%, from(' + hover2 + '), to(' + hover1 + '));';
                         $.each(pre, function(i, v) {
-                            after += 'background-image:' + v + 'linear-gradient(-45deg,' + color1 + ',' + color2 + ');';
-                            afterHover += 'background-image:' + v + 'linear-gradient(-45deg,' + hover1 + ',' + hover2 + ');';
-                            pressedAfter  += 'background-image:' + v + 'linear-gradient(-45deg,' + color2 + ',' + color1 + ');';
-                            pressedHoverAfter  += 'background-image:' + v + 'linear-gradient(-45deg,' + hover2 + ',' + hover1 + ');';
+                            after += defaultColorStyle + 'background-image:' + v + 'linear-gradient(top left,' + color1 + ',' + color2 + ');';
+                            afterHover += defaultHoverStyle + 'background-image:' + v + 'linear-gradient(top left,' + hover1 + ',' + hover2 + ');';
+                            pressedAfter  += defaultColorStyle + 'background-image:' + v + 'linear-gradient(top left,' + color2 + ',' + color1 + ');';
+                            pressedHoverAfter  += defaultHoverStyle + 'background-image:' + v + 'linear-gradient(top left,' + hover2 + ',' + hover1 + ');';
                         });
                         break;
                     case 'ios-e':
                         e.addClass('fancy-ios fancy-ios-e');
                         var x = Math.sqrt(height * height / 2) + 1;
                         style1 += 'border-color:' + border + ';margin-right:' + (height / 2) + 'px;';
-                        after += 'height:' + x + 'px;width:' + x + 'px;right:-' + (height * 0.3125) + 'px;top:' + ((height - x) / 2 - 1.7) + 'px;border-color:' + border + ';';
+                        after += 'height:' + (x-1) + 'px;width:' + x + 'px;right:-' + (height * 0.3125) + 'px;top:' + ((height - x) / 2 - 1.7) + 'px;border-color:' + border + ';';
                         after += 'background-image:-webkit-gradient(linear, 0 0, 100% 100%, from(' + color1 + '), to(' + color2 + '));';
                         afterHover  += 'background-image:-webkit-gradient(linear, 0 0, 100% 100%, from(' + hover1 + '), to(' + hover2 + '));';
                         pressedAfter  += 'background-image:-webkit-gradient(linear, 0 0, 100% 100%, from(' + color2 + '), to(' + color1 + '));';
                         pressedHoverAfter  += 'background-image:-webkit-gradient(linear, 0 0, 100% 100%, from(' + hover2 + '), to(' + hover1 + '));';
                         $.each(pre, function(i, v) {
-                            after += 'background-image:' + v + 'linear-gradient(-45deg,' + color1 + ',' + color2 + ');';
-                            afterHover += 'background-image:' + v + 'linear-gradient(-45deg,' + hover1 + ',' + hover2 + ');';
-                            pressedAfter  += 'background-image:' + v + 'linear-gradient(-45deg,' + color2 + ',' + color1 + ');';
-                            pressedHoverAfter  += 'background-image:' + v + 'linear-gradient(-45deg,' + hover2 + ',' + hover1 + ');';
+                            after += defaultColorStyle + 'background-image:' + v + 'linear-gradient(top left,' + color1 + ',' + color2 + ');';
+                            afterHover += defaultHoverStyle + 'background-image:' + v + 'linear-gradient(top left,' + hover1 + ',' + hover2 + ');';
+                            pressedAfter  += defaultColorStyle + 'background-image:' + v + 'linear-gradient(top left,' + color2 + ',' + color1 + ');';
+                            pressedHoverAfter  += defaultHoverStyle + 'background-image:' + v + 'linear-gradient(top left,' + hover2 + ',' + hover1 + ');';
                         });
                         break;
                     default:
@@ -163,8 +166,8 @@
 
                 // Fill
                 if (fill) {
-                    style1 += 'background-color:' + color1 + ';';
-                    hover  += 'background-color:' + hover1 + ';';
+                    style1 += defaultColorStyle;
+                    hover  += defaultHoverStyle;
                     pressed  += 'background-color:' + color2 + ';';
                     pressedHover  += 'background-color:' + hover2 + ';';
                     if ($.isArray(f)) { // Linear gradient

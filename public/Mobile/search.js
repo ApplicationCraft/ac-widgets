@@ -1,7 +1,7 @@
     /**
  * @lends       WiziCore_UI_SearchMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     var w = WiziCore_UI_SearchMobileWidget = AC.Widgets.WiziCore_UI_SearchMobileWidget =  AC.Widgets.WiziCore_UI_SearchMobileWidget = AC.Widgets.SearchMobile = function(){
         this.init.apply(this, arguments);
     };
@@ -77,6 +77,9 @@
         }
     };
 
+    p._shadow = function(val){
+        w._sc._shadow.call(this, val, this._input.parent());
+    };
 
     p._updateWidthOfInput = function(){
         var inp = this._input;

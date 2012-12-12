@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
     // This top section should always be present
     var widget = AC.Widgets.MediaElementBase = function() {
@@ -33,9 +33,8 @@
         }
     };
 
-    p.destroy = function() {
+    p.onDestroy = function() {
         _removePlayer.call(this);
-        widget._sc.destroy.apply(this, arguments);
     };
 
     /**
@@ -59,12 +58,16 @@
         this._updateEnable();
 
         //IE controls resize fix
-        $(this.page()).bind(AC.Widgets.WiziCore_Api_Page.onPageShow, function() {
+        $(this.repeatCompatiblePage()).bind(AC.Widgets.WiziCore_Api_Page.onPageShow + "." + this.id(), function() {
             if (self.visible()) {
                 self.visible(false);
                 self.visible(true);
             }
         });
+    };
+
+    p.onRemove = function(){
+        $(this.repeatCompatiblePage()).unbind(AC.Widgets.WiziCore_Api_Page.onPageShow + "." + this.id());
     };
 
     p._onInitLanguage = function() {
@@ -249,7 +252,7 @@
 
         if (!this._cont) {
             this._cont = $("<div style='width:100%;height:100%; position: relative' />");
-            this.base().append(this._cont);
+            this.base().prepend(this._cont);
         }
 
         this._playerCont = $("<" + this._playerType + " />");
@@ -537,14 +540,16 @@
             AC.Property.behavior.opacity,
             AC.Property.style.margin,
             AC.Property.style.border,
-            AC.Property.style.bgColor
+            AC.Property.style.bgColor,
+            AC.Property.style.customCssClasses,
+            AC.Property.style.widgetStyle
         ]}
 
     ],
         defaultProps = {width: "240", height: "160", x : "100", y: "100", zindex : "auto", margin: "", alignInContainer: 'left', pWidth: "",
             anchors : {left: true, top: true, bottom: false, right: false}, visible : true,
             opacity : 0.8, bgColor: "#000000", name: "MediaElementBase", data:[], enable: true, resizing: false, border:"1px solid gray",
-            poster : '', autoplay: false, preload:false, volume: 0.8, controls: true, source: []
+            poster : '', autoplay: false, preload:false, volume: 0.8, controls: true, source: [], widgetStyle: "default", customCssClasses: ""
         },
 
         lng = { "en" : {

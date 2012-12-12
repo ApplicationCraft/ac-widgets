@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
     // This top section should always be present
     var widget = AC.Widgets.Photoswipe = function() {
@@ -15,6 +15,8 @@
     p._galCont = null;
     p._photoswipe = null;
     p._onParentContInited = false;
+    p._isSlideShowActive = false;
+    p._skipSlideshowStartStopEvents = false;
 
     /**
      * Constructor
@@ -25,15 +27,13 @@
         widget._sc.init.apply(this, arguments);
     };
 
-    p.destroy = function() {
+    p.onDestroy = function() {
         this._removeGallery();
 
         if (this._cont) {
             this._cont.remove();
             this._cont = null;
         }
-
-        widget._sc.destroy.apply(this, arguments);
     };
 
     p._onInitLanguage = function() {
@@ -57,9 +57,38 @@
         this._cont = $("<div style='width:100%;position: relative; overflow: hidden' />");
         this.base().append(this._cont);
 
-        this._updateEnable();
         this._data(this._project['data']);
+        this._updateEnable();
+
+        var self = this;
+
+        //hack to prevent photoswipe freeze
+        if (this.mode() != WiziCore_Visualizer.EDITOR_MODE) {
+            $(this.form()).bind(AC.Widgets.WiziCore_Api_Form.PageChanging.onStart + '.' + this.htmlId(), function (e, id) {
+                if (self.page().id() != id && self._photoswipe && self._photoswipe.carousel) {
+                    self._skipSlideshowStartStopEvents = true;
+                    self._photoswipe.stop();
+                    self._photoswipe.carousel.isSliding = false;
+                    Code.Util.Animation.stop(self._photoswipe.carousel.contentEl);
+                    self._skipSlideshowStartStopEvents = false;
+                }
+            });
+            $(this.repeatCompatiblePage())
+                .bind(AC.Widgets.WiziCore_Api_Page.onPageShow + '.' + this.htmlId(), function () {
+                    if (self._photoswipe && self._isSlideShowActive) {
+                        self._skipSlideshowStartStopEvents = true;
+                        self._photoswipe.play();
+                        self._skipSlideshowStartStopEvents = false;
+                    }
+                });
+        }
     };
+
+    p.onRemove = function(){
+        $(this.form()).unbind(AC.Widgets.WiziCore_Api_Form.PageChanging.onStart + '.' + this.htmlId());
+        $(this.repeatCompatiblePage()).unbind(AC.Widgets.WiziCore_Api_Page.onPageShow + '.' + this.htmlId());
+    };
+
 
     p._updateLayout = function() {
         widget._sc._updateLayout.apply(this, arguments);
@@ -71,13 +100,31 @@
                 this._photoswipe.resetPosition(true);
         }
 
+        if (!this.pWidth() || this.parent().getLayoutType() == 'absolute') {
+            this.tableBase().css('width', this.width());
+        }
 
-        this._setPosEnableDiv();
+        if (this.photoswipeMode() == 'swipe')
+            this._setPosEnableDiv();
     };
 
     p._enable = function(flag) {
         widget._sc._enable.apply(this, arguments);
-        this.showEnableDiv(flag === true);
+        var isSwipe = this.photoswipeMode() == 'swipe';
+        var needToShowEnableDiv = (flag === false && isSwipe);
+        this.showEnableDiv(!needToShowEnableDiv);
+        this._zindex(901, this._enableDiv);
+
+        if (this._cont) {
+            if (flag !== true && !isSwipe) {
+                this._cont.addClass('ui-state-disabled');
+                this._cont.find('a').css('cursor', 'default');
+            } else {
+                this._cont.removeClass('ui-state-disabled');
+                this._cont.find('a').css('cursor', '');
+            }
+        }
+        Code.PhotoSwipe.stopTapEvent = !flag;
     };
 
     //TODO: hack for mobile click event
@@ -117,6 +164,7 @@
     p._photoswipeMode = function(val) {
         if (val != undefined && this._isDrawn) {
             this._data(this.data());
+            this._updateEnable();
         }
     };
 
@@ -183,7 +231,7 @@
         //clear gallery
         this._removeGallery();
 
-        if (data == undefined || !$.isArray(data) || data.length == 0) {
+        if (!this._cont || data == undefined || !$.isArray(data) || data.length == 0) {
             return;
         }
 
@@ -207,30 +255,57 @@
 
     function addEvents() {
         var self = this;
+
+        function triggerEvent(eventName, params) {
+            $(self).trigger(new $.Event(widget[eventName]), params);
+        }
+
         if (this._photoswipe) {
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeShow, function(e){ $(self).trigger(new jQuery.Event(widget.onBeforeShow)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onShow, function(e){ $(self).trigger(new jQuery.Event(widget.onShow)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeHide, function(e){ $(self).trigger(new jQuery.Event(widget.onBeforeHide)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onDisplayImage, function(e){ $(self).trigger(new jQuery.Event(widget.onDisplayImage), [e.action, e.index]); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onResetPosition, function(e){ $(self).trigger(new jQuery.Event(widget.onResetPosition)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onSlideshowStart, function(e){ $(self).trigger(new jQuery.Event(widget.onSlideshowStart)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onTouch, function(e){ $(self).trigger(new jQuery.Event(widget.onTouch), [e.action, e.point]); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeCaptionAndToolbarShow, function(e){ $(self).trigger(new jQuery.Event(widget.onBeforeCaptionAndToolbarShow)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onCaptionAndToolbarShow, function(e){ $(self).trigger(new jQuery.Event(widget.onCaptionAndToolbarShow)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeCaptionAndToolbarHide, function(e){ $(self).trigger(new jQuery.Event(widget.onBeforeCaptionAndToolbarHide)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onCaptionAndToolbarHide, function(e){ $(self).trigger(new jQuery.Event(widget.onCaptionAndToolbarHide)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onToolbarTap, function(e){ $(self).trigger(new jQuery.Event(widget.onToolbarTap)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeZoomPanRotateShow, function(e){ $(self).trigger(new jQuery.Event(widget.onBeforeZoomPanRotateShow)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onZoomPanRotateShow, function(e){ $(self).trigger(new jQuery.Event(widget.onZoomPanRotateShow)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeZoomPanRotateHide, function(e){ $(self).trigger(new jQuery.Event(widget.onBeforeZoomPanRotateHide)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onZoomPanRotateHide, function(e){ $(self).trigger(new jQuery.Event(widget.onZoomPanRotateHide)); });
-            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onZoomPanRotateTransform, function(e){ $(self).trigger(new jQuery.Event(widget.onZoomPanRotateTransform)); });
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeShow, triggerEvent('onBeforeShow'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onShow, function(e){ self._onShow(); });
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeHide, triggerEvent('onBeforeHide'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onDisplayImage, function(e){ triggerEvent('onDisplayImage', [e.action, e.index]); });
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onResetPosition, triggerEvent('onResetPosition'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onSlideshowStart, $.proxy(self._onSlideShowStart, this));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onSlideshowStop, $.proxy(self._onSlideShowStop, this));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onTouch, function(e){ triggerEvent('onTouch', [e.action, e.point]); });
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeCaptionAndToolbarShow, triggerEvent('onBeforeCaptionAndToolbarShow'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onCaptionAndToolbarShow, triggerEvent('onCaptionAndToolbarShow'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeCaptionAndToolbarHide, triggerEvent('onBeforeCaptionAndToolbarHide'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onCaptionAndToolbarHide, triggerEvent('onCaptionAndToolbarHide'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onToolbarTap, triggerEvent('onToolbarTap'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeZoomPanRotateShow, triggerEvent('onBeforeZoomPanRotateShow'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onZoomPanRotateShow, triggerEvent('onZoomPanRotateShow'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onBeforeZoomPanRotateHide, triggerEvent('onBeforeZoomPanRotateHide'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onZoomPanRotateHide, triggerEvent('onZoomPanRotateHide'));
+            this._photoswipe.addEventHandler(Code.PhotoSwipe.EventTypes.onZoomPanRotateTransform, triggerEvent('onZoomPanRotateTransform'));
         }
     }
 
+    p._onShow = function() {
+        if (this.photoswipeMode() == 'swipe')
+            this._updateEnable();
+
+        $(this).trigger(new jQuery.Event(widget.onShow));
+    };
+
+    p._onSlideShowStart = function() {
+        if (!this._skipSlideshowStartStopEvents) {
+            this._isSlideShowActive = true;
+            $(this).trigger(new $.Event(widget.onSlideshowStart));
+        }
+    };
+
+    p._onSlideShowStop = function() {
+        if (!this._skipSlideshowStartStopEvents) {
+            this._isSlideShowActive = false;
+            $(this).trigger(new $.Event(widget.onSlideshowStop));
+        }
+    };
+
     function removeEvents() {
         if (this._photoswipe) {
-            this._photoswipe.removeEventHandlers();
+            $(this._photoswipe).unbind();
         }
     }
 
@@ -276,7 +351,7 @@
             imageScaleMethod: this.imageScaleMethod(),
             allowRotationOnUserZoom: this.allowRotationOnUserZoom(),
             captionAndToolbarHide: this.captionAndToolbarHide(),
-            enableMouseWheel: mode , enableKeyboard: mode
+            enableMouseWheel: mode , enableKeyboard: mode, zIndex: 900
         });
     }
 
@@ -306,7 +381,7 @@
                 imageScaleMethod: this.imageScaleMethod(),
                 allowRotationOnUserZoom: this.allowRotationOnUserZoom(),
                 captionAndToolbarHide: this.captionAndToolbarHide(),
-                enableMouseWheel: mode , enableKeyboard: mode
+                enableMouseWheel: mode , enableKeyboard: mode, zIndex: 900
             }
         );
         this._photoswipe.show(0);
@@ -509,7 +584,9 @@
             AC.Property.style.margin,
             AC.Property.style.border,
             AC.Property.style.bgColor,
-            {name: "columnWidth", type : "widthpercents", set: "columnWidth", get: "columnWidth", alias: "widget_photoswipe_columnwidth"}
+            {name: "columnWidth", type : "widthpercents", set: "columnWidth", get: "columnWidth", alias: "widget_photoswipe_columnwidth"},
+            AC.Property.style.customCssClasses,
+            AC.Property.style.widgetStyle
         ]}
 
     ],
@@ -517,7 +594,8 @@
             anchors : {left: true, top: true, bottom: false, right: false}, visible : true,
             opacity : 1, bgColor: "#ffffff", name: "Photoswipe", data:[], enable: true, resizing: false, border:"1px solid gray",
             source: [], columnWidth: "33", autoStartSlideshow: false, imageScaleMethod: "fit", toolbarAutoHideDelay: 5000, toolbarOpacity: 0.8,
-            allowRotationOnUserZoom: false, photoswipeMode: 'gallery', captionAndToolbarHide: false
+            allowRotationOnUserZoom: false, photoswipeMode: 'gallery', captionAndToolbarHide: false, customCssClasses: "", widgetStyle: "default"
+
         },
 
         lng = { "en" : {

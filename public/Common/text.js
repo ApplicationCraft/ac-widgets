@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_TextWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
     function _getDrawnValue(projectValue) {
         if (!this._input)
@@ -61,26 +61,28 @@
         if (this.getContainerLayoutType() == WiziCore_Widget_Layout.LAYOUT_TYPES.Absolute){
             this._input.width(this.width());
         } else {
-            this._input.width("100%");
+            if ($.browser.msie){
+                this._input.width("98%");
+            } else {
+                this._input.width("100%");
+            }
         }
     },
 
-    remove: function() {
+    onRemove: function() {
         if (this._checkRepeatBeforeRemove()){
             return;
         }
         if (this._input){
             this._input.remove();
         }
-        this._super();
     },
 
-    destroy: function() {
+    onDestroy: function() {
         var input = $(this._input);
         input.unbind('change.custom');
         this._unbindPlaceholderEvents(input);
         this._input = null;
-        this._super();
     },
 
     initProps: function() {
@@ -380,6 +382,14 @@
     _bg: function(bg) {
         this._super(bg);
         this._setElementBg(bg, this._input);
+    },
+
+    getNewWidgetSize: function() {
+        var el = this.base();
+        var isFirefox = WiziCore_Helper.isFirefox();
+        var w = el.width();
+        var h = el.height();
+        return {width: w, height: h};
     },
 
 

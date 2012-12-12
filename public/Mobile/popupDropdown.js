@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_PopupDropdownMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_PopupDropdownMobileWidget = AC.Widgets.WiziCore_UI_PopupDropdownMobileWidget =  AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.extend({
     _widgetClass: "WiziCore_UI_PopupDropdownMobileWidget",
     _oldVal: null,
@@ -45,6 +45,8 @@ var WiziCore_UI_PopupDropdownMobileWidget = AC.Widgets.WiziCore_UI_PopupDropdown
     },
 
     _data: function(val) {
+        if (!this._mainCnt)
+            return;
 
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
@@ -59,13 +61,22 @@ var WiziCore_UI_PopupDropdownMobileWidget = AC.Widgets.WiziCore_UI_PopupDropdown
         this._div = $('<div/>');
         var selectDivId = "selectDiv-" + this.htmlId();
         this._div.attr("id", selectDivId);
-        var label = $('<label class="select" for="' + selectId + '"></label>'),
+        var isMobile = WiziCore_Helper.isMobile(),
+            label = $('<label class="select" for="' + selectId + '"></label>'),
             div = this._div,
             selectId = this.selectElemId(),
             select = $('<select name="' + selectId + '" id="' + selectId + '"/>'),
             i = 0, l = val ? val.length : 0;
 
-        select.data('native-menu', WiziCore_Helper.isMobile());
+        label.text(this.label());
+        label.hide();
+
+        if (!isMobile){
+            select.append($("<option>" + this.label() + "</option>"));
+        }
+        this.placeholder = this.label();
+
+        select.data('native-menu', isMobile);
         if (this._isDataManual != undefined){
             var res = this._getStartAndLength(l);
             i = res.i;
@@ -120,19 +131,39 @@ var WiziCore_UI_PopupDropdownMobileWidget = AC.Widgets.WiziCore_UI_PopupDropdown
     },
 
     _tabindex: function(value) {
-        this._super(value, this.base().find('a'));
+        this._super(value, this._btnDiv);
     },
 
     _tabStop: function(val) {
-        this._super(val, this.base().find('a'));
+        this._super(val, this._btnDiv);
     },
 
     setFocus: function() {
         if (this._isDrawn && this.mode() != WiziCore_Visualizer.EDITOR_MODE) {
-            this.base().find('a').focus();
+            this._btnDiv.focus();
         }
     },
 
+    /**
+     * Function call, then to elements bind event
+     * @param {String} event type of event
+     * @private
+     */
+    addEvents: function(event) {
+        if (this._select == null) {
+            return;
+        }
+
+        switch (event) {
+            case AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.onChange:
+                var evName = "change";
+                this._select.bind(evName, {self: this}, this.onChange);
+                break;
+
+            default:
+                break;
+        }
+    },
 
     /**
      * On onChange event
@@ -159,9 +190,9 @@ var WiziCore_UI_PopupDropdownMobileWidget = AC.Widgets.WiziCore_UI_PopupDropdown
     },
 
     selectOption: function(ind){
-        if (this._select && ind > 0){
+        if (this._select && ind >= 0){
             this._selected = true;
-            this._select.children().eq(ind).attr("selected", "selected");
+            this._select.children("option[value="+ ind +"]").attr("selected", true);
         }
     },
 
@@ -268,23 +299,6 @@ var WiziCore_UI_PopupDropdownMobileWidget = AC.Widgets.WiziCore_UI_PopupDropdown
         return retVal;
     },
 
-//    _beforeLabel: function(text) {
-//        if (this.form().language() != null) {
-//            var isToken = WiziCore_Helper.isLngToken(text),
-//                token = isToken ? text : ('ac-' + this.id());
-//
-//            if (!isToken)
-//                this.form().addTokenToStringTable(this.id(), this.name(), token, text);
-//
-//            return token;
-//        } else
-//            return text;
-//    },
-//
-//    _label: function() {
-//        (this._isDrawn) ? this._data(this._project['data']) : null;
-//    },
-
     collectDataSchema: function(dataSchema) {
         if (!this.isIncludedInSchema()) {
             return undefined;
@@ -370,6 +384,65 @@ var WiziCore_UI_PopupDropdownMobileWidget = AC.Widgets.WiziCore_UI_PopupDropdown
     }*/
 });
 
+    var _props = [
+        { name: AC.Property.group_names.general, props:[
+            AC.Property.general.widgetClass,
+            AC.Property.general.name,
+            AC.Property.general.elementsPerPage,
+            AC.Property.general.currPage,
+            AC.Property.general.dataWithValueRadioBox,
+            AC.Property.general.label
+        ]},
+        { name: AC.Property.group_names.database, props:[
+            AC.Property.database.isIncludedInSchema,
+            AC.Property.database.dataType,
+            AC.Property.database.isUnique,
+            AC.Property.database.mandatory
+        ]},
+        { name: AC.Property.group_names.layout, props:[
+            AC.Property.layout.pWidthHidden,
+            AC.Property.layout.widthHidden,
+            AC.Property.layout.heightHidden,
+            AC.Property.layout.sizes,
+            AC.Property.layout.minWidth,
+            AC.Property.layout.maxWidth,
+            AC.Property.layout.x,
+            AC.Property.layout.y,
+            AC.Property.layout.zindex,
+            AC.Property.layout.tabindex,
+            AC.Property.layout.tabStop,
+            AC.Property.layout.anchors,
+            AC.Property.layout.alignInContainer,
+            AC.Property.layout.repeat
+        ]},
+        { name: AC.Property.group_names.behavior, props:[
+            AC.Property.behavior.dragAndDrop,
+            AC.Property.behavior.resizing,
+            AC.Property.behavior.visible,
+            AC.Property.behavior.enable
+        ]},
+        { name: AC.Property.group_names.data, props:[
+            AC.Property.data.view,
+            AC.Property.data.fields,
+            AC.Property.data.groupby,
+            AC.Property.data.orderby,
+            AC.Property.data.filter,
+            AC.Property.data.onview,
+            AC.Property.data.applyview,
+            AC.Property.data.listenview,
+            AC.Property.data.resetfilter,
+            AC.Property.data.autoLoad
+        ]},
+        { name: AC.Property.group_names.style, props:[
+            AC.Property.behavior.opacity,
+            AC.Property.style.margin,
+            AC.Property.style.mobileTheme,
+            AC.Property.general.displayHourglassOver,
+            AC.Property.style.customCssClasses,
+            AC.Property.style.widgetStyle
+        ]}
+    ];
+
 /**
  * Return empty widget prop
  * @return {Object} default properties
@@ -411,7 +484,9 @@ WiziCore_UI_PopupDropdownMobileWidget.inlineEditPropName = function() {
  * Return available widget prop
  * @return {Object} available property
  */
-WiziCore_UI_PopupDropdownMobileWidget.props = AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.props;
+WiziCore_UI_PopupDropdownMobileWidget.props = function() {
+    return _props;
+};
 
 /**
  * Return available widget actions

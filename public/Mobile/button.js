@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ButtonMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ButtonMobileWidget = AC.Widgets.WiziCore_UI_ButtonMobileWidget = AC.Widgets.WiziCore_UI_BaseMobileWidget.extend({
     _widgetClass: "WiziCore_UI_ButtonMobileWidget",
     _input: null,
@@ -30,11 +30,23 @@ var WiziCore_UI_ButtonMobileWidget = AC.Widgets.WiziCore_UI_ButtonMobileWidget =
         this._updateButtonStyle(this.height());
     },
 
+    _updateButtonViewOnClick: function(){
+        if (WiziCore_Helper.isMobile() || WiziCore_Helper.isNative()){
+            var anchor = this.base().find("a"),
+                mobileTheme = this.mobileTheme();
+            anchor.addClass("m-ui-btn-active-" + mobileTheme);
+            var self = this;
+            setTimeout(function(){
+                anchor.removeClass("m-ui-btn-active-" + mobileTheme);
+            },400);
+        }
+    },
+
     onResize:function() {
         this._updateButtonStyle(this.base().height());
     },
 
-    onWidgetMoved: function(){
+    onWidgetMovedByCommand: function(){
         var height = this.height();
         if (this.parent() && this.parent().widgetClass() == "WiziCore_UI_ContainerMobileWidget"){
             //55 is default height of button
@@ -87,6 +99,9 @@ var WiziCore_UI_ButtonMobileWidget = AC.Widgets.WiziCore_UI_ButtonMobileWidget =
     },
 
     _redraw: function() {
+        if (!this._cnt)
+            return;
+
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
         this._super();
@@ -118,8 +133,10 @@ var WiziCore_UI_ButtonMobileWidget = AC.Widgets.WiziCore_UI_ButtonMobileWidget =
             link.find(".m-ui-icon").css({"background-image": "url(" + userLink + ")"});
         }
 
-        if (this.mode() != WiziCore_Visualizer.EDITOR_MODE){
-            this.bindEvent(AC.Widgets.Base.onClick);
+        if (this._bindingEvents[AC.Widgets.Base.onClick] == 0 || this._bindingEvents[AC.Widgets.Base.onClick] == undefined) {
+            this.eventsHandles()[AC.Widgets.Base.onClick] = AC.Widgets.Base.onClick;
+            if (this.mode() != WiziCore_Visualizer.EDITOR_MODE)
+                this.bindEvent(AC.Widgets.Base.onClick);
         }
         this._input = i;
         this._updateButtonStyle(this.height(), true);
@@ -133,13 +150,18 @@ var WiziCore_UI_ButtonMobileWidget = AC.Widgets.WiziCore_UI_ButtonMobileWidget =
     _enable: function(val){
         if (this._input){
             val = (val === true) ? "enable" : "disable";
-            this._input.mobileButton(val);
+            this._input.data("mobileButton") && this._input.mobileButton(val);
         }
     },
 
+    _shadow: function(val, div){
+        this._super(val, div || this._input);
+    },
+
+
 //    onPageDrawn: function() {
 //        this._super.apply(this, arguments);
-//        this._input.mobileButton({theme: this._theme});
+//        this._input.data("mobileButton") && this._input.mobileButton({theme: this._theme});
 //    },
 
     setFocus: function() {

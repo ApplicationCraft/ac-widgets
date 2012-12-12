@@ -84,9 +84,12 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
         //this._sectionsAfter(this.sections() );
 
         var sections = this.sections();
+        this._updateSectionsOpeningMode(sections);
+    },
+
+    _updateSectionsOpeningMode: function(sections) {
         if (sections != undefined && sections.rows != undefined) {
             var valueRows = sections.rows;
-            var newIds = [];
             for (var i = 0; i < valueRows.length; ++i) {
                 var row = valueRows[i];
                 var id = row.id;
@@ -97,6 +100,42 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
         }
         this.applyAutoExpand(this.autoExpand() );
         this._updateEnable();
+    },
+
+    getSectionState: function(index) {
+        var sections = this.sections(), result = null;
+        if (sections != undefined && sections.rows != undefined && sections.rows[index]) {
+            var child = this.findChildById(sections.rows[index].id);
+            var headerDiv = $(this._div.children("h4[data-linktowidget=" + child.htmlId() + "]"));
+            result = headerDiv.hasClass("ui-accordion-header-active");
+        }
+        return result;
+    },
+
+    setSectionState: function(index, state) {
+        var sections = this.sections();
+        if (sections != undefined && sections.rows != undefined && sections.rows[index]) {
+            var child = this.findChildById(sections.rows[index].id);
+            var headerDiv = $(this._div.children("h4[data-linktowidget=" + child.htmlId() + "]"));
+            var hasClass = headerDiv.hasClass("ui-accordion-header-active");
+
+            if ((state === true && !hasClass) || (state !== true && hasClass))
+                headerDiv.click();
+        }
+    },
+
+    _getSectionIndexById: function(id) {
+        var sections = this.sections(), result = -1;
+        if (sections != undefined && sections.rows != undefined) {
+            var rows = sections.rows;
+            for (var i = 0, l = rows.length; i < l; i++) {
+                if (rows[i].id == id) {
+                    result = i;
+                    break;
+                }
+            }
+        }
+        return result;
     },
 
     createChild: function(){
@@ -148,6 +187,7 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
         this.contentBorderRadius = this.themeProperty('contentBorderRadius', this._contentBorderRadius);
         this.sectionBGColor = this.themeProperty('sectionBGColor', this._sectionBGColor);
 
+        this.stateSection  = this.setSectionState;
     },
 
     initDomState : function (){
@@ -204,7 +244,13 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
 
     updateSectionContentBorderRadius : function(){
         var setVal = this.contentBorderRadius();
-        this._borderRadius(setVal, this._div.children("div"));
+//        this._borderRadius(setVal, this._div.children("div"));
+        var divs = this._div.children("div"),
+            containers = divs.children(),
+            res = divs.add(containers);
+
+        this._borderRadius(setVal, res);
+
     },
 
     updateSectionBGColor : function(){
@@ -384,6 +430,7 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
                 this.updateSectionHeight(container, height);
             }
             this.setSectionStyleProperties();
+            this._updateSectionsOpeningMode(value);
         }
         jQuery.fn.__useTr = trState;
     },
@@ -412,16 +459,20 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
     },
 
     createSectionHeaderDiv : function(id, text, isOpened){
+        var self = this;
         var headerDiv = $("<h4 />");
+        headerDiv.append('<span class="ui-icon ui-icon-triangle-1-e ui-accordion-header-icon"></span>');
         var headerText = (text != undefined) ? text : "Section";
         headerDiv.append($("<a href=\"#\"></a>"));
 //        headerDiv.append($("<a href=\"#\">" + headerText + "</a>"));
         var trVal = this.getTrValueAddLngAttr(text, headerDiv.find('a'));
         headerDiv.find('a').html(trVal);
-        headerDiv.addClass("ui-accordion-header ui-helper-reset ui-state-default ui-corner-top ui-corner-bottom");
-        headerDiv.hover(function() {$(this).toggleClass("ui-state-hover");})
-        headerDiv.append('<span class="ui-icon ui-icon-triangle-1-e"></span>');
-        var self = this;
+        headerDiv.addClass("ui-accordion-header ui-helper-reset ui-state-default ui-corner-top ui-corner-bottom ui-accordion-icons");
+        headerDiv.hover(function() {
+            if (!self.enable() || !self._isParentEnable())
+                return;
+            $(this).toggleClass("ui-state-hover");}
+        );
 
         headerDiv.css("background", self._inactiveHeaderColor);
         headerDiv.click(function() {
@@ -461,8 +512,8 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
                 var child = self.findChildById(id);
                 child.onParentVisibleChanged(isOpened);
 
-                var sectionsData = self.sections();
-                    if (sectionsData.rows != undefined){
+                var sectionsData = self._project['sections'];
+                    if (sectionsData && sectionsData.rows){
                         for (var i = 0, l = sectionsData.rows.length; i < l; i++){
                             var row = sectionsData.rows[i];
                             if (row.id == id){
@@ -479,7 +530,15 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
                 child.draw(contentDiv);
                 child.onPageDrawn();
                 child.base().width("100%");
+
+                // update container border radius
+                var setVal = self.contentBorderRadius();
+                self._borderRadius(setVal, child.base());
             }
+
+            var rowIndex = self._getSectionIndexById(id);
+            var state = $this.hasClass("ui-accordion-header-active");
+            $(self).trigger(new jQuery.Event(WiziCore_UI_AccordionWidget.onSectionStateChanged), [rowIndex, state]);
 
             return false;
         });
@@ -538,10 +597,13 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
 
     _enable: function(flag){
         if (this._div != null){
+            var headers = this._div.children("h4");
             if (flag === false){
-                this._div.children("h4").addClass('ui-state-disabled');
+                headers.addClass('ui-state-disabled');
+                headers.find("a").addClass('wa-disable-cursor');
             } else {
-                this._div.children("h4").removeClass('ui-state-disabled');
+                headers.removeClass('ui-state-disabled');
+                headers.find("a").removeClass('wa-disable-cursor');
             }
         }
     },
@@ -570,7 +632,17 @@ var WiziCore_UI_AccordionWidget = AC.Widgets.WiziCore_UI_AccordionWidget =  AC.W
         return openingModesValues;
     }
 });
-/**
+
+WiziCore_UI_AccordionWidget.onSectionStateChanged = "E#AccordionContainer#onSectionStateChanged";
+
+    WiziCore_UI_AccordionWidget.actions = function() {
+        return {
+            onSectionStateChanged : {alias : "widget_event_on_section_state_changed", funcview : "onSectionStateChanged", action : "AC.Widgets.WiziCore_UI_AccordionWidget.onSectionStateChanged", params : "index, state", group : "widget_event_general"}
+        };
+    };
+
+
+    /**
  * Return empty widget prop
  * @return {Object} default properties
  */

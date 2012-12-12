@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_CheckBoxMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_CheckBoxMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxMobileWidget = AC.Widgets.WiziCore_UI_BaseMobileWidget.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple, {
     _widgetClass: "WiziCore_UI_CheckBoxMobileWidget",
     _input: null,
@@ -35,6 +35,9 @@ var WiziCore_UI_CheckBoxMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxMobileWidg
 
 
     _redraw: function() {
+        if (!this._cnt)
+            return;
+
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
         this._super();
@@ -155,23 +158,23 @@ var WiziCore_UI_CheckBoxMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxMobileWidg
         return !triggerEvent.isPropagationStopped();
     },
 
-    destroy: function() {
-        try {
-            this._input.unbind("change");
-        }
-        catch(e) {
-        }
-        this._super();
+    onDestroy: function() {
+        this._input && $(this._input).unbind();
     },
+
+    _shadow: function(val){
+        this._super(val, this._labelObj);
+    },
+
 
     _checked: function(flag) {
         var el = this._input;
         if (flag === undefined){
-            el.checkboxradio('refresh');// strange double refresh gets right value...
+            el.data("checkboxradio") && el.checkboxradio('refresh');// strange double refresh gets right value...
         }
         if (this._isDrawn && el) {
             el.attr('checked', flag);
-            el.checkboxradio('refresh');
+            el.data("checkboxradio") && el.checkboxradio('refresh');
         }
         return el.is(":checked");
     },
@@ -179,12 +182,12 @@ var WiziCore_UI_CheckBoxMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxMobileWidg
     _enable: function(val) {
         if (this._input) {
             val = (val === true) ? "enable" : "disable";
-            this._input.checkboxradio(val);
+            this._input.data("checkboxradio") && this._input.checkboxradio(val);
         }
     },
 
 //    onPageDrawn: function() {
-//        this._input.checkboxradio();
+//        this._input.data("checkboxradio") && this._input.checkboxradio();
 //    },
 
     _tabindex: function(val) {

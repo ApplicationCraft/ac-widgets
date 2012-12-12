@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_CheckBoxGroupMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_BaseMobileWidget.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationList, WiziCore_Source_Widget_PagingAPI,{
     _widgetClass: "WiziCore_UI_CheckBoxGroupMobileWidget",
     _div: null,
@@ -29,10 +29,6 @@ var WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxGroup
 
         this.base().append(this._mainCnt);
         this._super.apply(this, arguments);
-    },
-
-    destroy: function() {
-        this._super();
     },
 
     data: function(data) {
@@ -63,19 +59,24 @@ var WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxGroup
 
     _dataRedraw: function(val) {
         this.removeEvent(WiziCore_UI_CheckBoxGroupMobileWidget.onChange);
-        var reDraw = false;
-        if (this._isDrawn && this._div) {
-            reDraw = true;
+        this.removeEvent(AC.Widgets.WiziCore_Widget_Base.onClick);
+        var self = this;
+        if (this._div) {
             this._removeFieldContain();
         }
 
         this._div = $("<div></div>");
         this._div.attr("id", this.htmlId());
-        this._fieldset = $('<fieldset data-role="controlgroup"/>');
-
+        this._fieldset = $('<div data-role="controlgroup" style="width:100%"/>');
 
         if (val){
-            for (var i in val) {
+            var i = 0, l = val.length;
+            if (this._isDataManual != undefined){
+                var res = this._getStartAndLength(l);
+                i = res.i;
+                l = res.l;
+            }
+            for (;i < l; i++) {
                 var eltValue = WiziCore_Helper.escapeHTMLtags("" + val[i][1]);
                 var eltId = this.htmlId() + i;
                 var input = $('<input type="checkbox" id="' + eltId + '" name="' + eltId + '"/>');
@@ -92,9 +93,13 @@ var WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxGroup
         this._div.append(this._fieldset);
         this._mainCnt.append(this._div);
         this.addEvent(WiziCore_UI_CheckBoxGroupMobileWidget.onChange);
+        this.addEvent(AC.Widgets.WiziCore_Widget_Base.onClick);
     },
 
     _redraw: function() {
+        if (!this._mainCnt)
+            return;
+
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
         this._dataRedraw(this._project['data']);
@@ -106,17 +111,27 @@ var WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxGroup
         this._updateEnable();
         jQuery.fn.__useTr = trState;
     },
+
+    _shadow: function(val){
+        this._super(val, this._fieldset);
+    },
+
     /**
      * Function call, then to elements bind event
      * @param {String} event type of event
      * @private
      */
     addEvent: function(event) {
+        var self = this;
         switch (event) {
             case WiziCore_UI_CheckBoxGroupMobileWidget.onChange:
                 this._mainCnt.find('input').bind("change.ac", {self: this}, this.onChange);
                 break;
-
+            case AC.Widgets.WiziCore_Widget_Base.onClick:
+                this._mainCnt.find('input').bind("click.ac", function(ev) {
+                    self.onClick(ev);
+                });
+                break;
             default:
                 break;
         }
@@ -128,14 +143,18 @@ var WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxGroup
      * @param {Boolean} force force unbind
      * @private
      */
-    removeEvent: function(event, force) {
+    removeEvent: function(event) {
         switch (event) {
             case WiziCore_UI_CheckBoxGroupMobileWidget.onChange:
                     if (this._mainCnt) {
                         this._mainCnt.find('input').unbind("change.ac");
                     }
                 break;
-
+            case AC.Widgets.WiziCore_Widget_Base.onClick:
+                if (this._mainCnt) {
+                    this._mainCnt.find('input').unbind("click.ac");
+                }
+                break;
             default:
                 break;
         }
@@ -359,13 +378,14 @@ var WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxGroup
     _selectItemsByIndexesSet : function() {
         var self = this;
         this.base().find('input[type="checkbox"]').each(function() {
+            var $this = $(this);
             // this == element
-            if (self._project["selectedIndices"][+$(this).attr("data-index")]){
-                $(this).attr('checked', true);
+            if (self._project["selectedIndices"][+$this.attr("data-index")]){
+                $this.attr('checked', true);
             } else {
-                $(this).removeAttr("checked");
+                $this.removeAttr("checked");
             }
-            $(this).checkboxradio('refresh');
+            $this.data("checkboxradio") && $this.checkboxradio('refresh');
         });
     },
 
@@ -501,7 +521,8 @@ var WiziCore_UI_CheckBoxGroupMobileWidget = AC.Widgets.WiziCore_UI_CheckBoxGroup
     _enable: function(val) {
         if (this._fieldset) {
             val = (val === true) ? "enable" : "disable";
-            this._fieldset.find("input").checkboxradio(val);
+            var input = this._fieldset.find("input");
+            input.data("checkboxradio") && input.checkboxradio(val);
         }
     },
 

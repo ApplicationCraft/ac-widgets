@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_MenuAdvancedWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_MenuAdvancedWidget = AC.Widgets.WiziCore_UI_MenuAdvancedWidget =  AC.Widgets.Base.extend({
     _widgetClass: "WiziCore_UI_MenuAdvancedWidget",
 
@@ -122,14 +122,18 @@ var WiziCore_UI_MenuAdvancedWidget = AC.Widgets.WiziCore_UI_MenuAdvancedWidget =
         this._textColors(this.textColors());
         this._bgColors(this.bgColors());
         this._updateLayout();
+        this._updateEnable();
     },
 
     _bindEvents: function() {
-        var menu = this._menu;
+        var menu = this._menu, self = this;
         var menuItems = menu.children('li');
         var overlay = this._menuOverlay;
 
         menuItems.unbind('mouseenter').unbind('mouseleave').bind('mouseenter',function() {
+            if (!self.enable())
+                return false;
+
             menuItems.removeClass('selected');
             var $this = $(this);
             var menuItemId = $this.attr('id');
@@ -146,6 +150,9 @@ var WiziCore_UI_MenuAdvancedWidget = AC.Widgets.WiziCore_UI_MenuAdvancedWidget =
         });
 
         menu.unbind('mouseenter').unbind('mouseleave').bind('mouseenter',function() {
+            if (!self.enable())
+                return false;
+
             overlay.stop(true,true).fadeTo(200, 0.6);
             $(this).addClass('hovered');
         }).bind('mouseleave',function() {
@@ -174,6 +181,7 @@ var WiziCore_UI_MenuAdvancedWidget = AC.Widgets.WiziCore_UI_MenuAdvancedWidget =
         this._textColors(this.textColors());
         this._bgColors(this.bgColors());
         this._updateLayout();
+        this._updateEnable();
     },
 
     _bgColors: function(val) {
@@ -200,6 +208,21 @@ var WiziCore_UI_MenuAdvancedWidget = AC.Widgets.WiziCore_UI_MenuAdvancedWidget =
 
             this._menuBgStyle = $("<style>" + cssStyle + "</style>");
             this.tableBase().prepend(this._menuBgStyle);
+        }
+    },
+
+    _enable: function(flag) {
+        this._super(flag);
+
+        if (this._menu) {
+            var aEls = this._menu.find('a');
+            if (flag === false) {
+                this._menu.addClass('ui-state-disabled');
+                aEls.css('cursor', 'default');
+            } else {
+                this._menu.removeClass('ui-state-disabled');
+                aEls.css('cursor', '');
+            }
         }
     },
 
@@ -389,7 +412,8 @@ var _props = [
     { name: AC.Property.group_names.behavior, props:[
         AC.Property.behavior.dragAndDrop,
         AC.Property.behavior.resizing,
-        AC.Property.behavior.visible
+        AC.Property.behavior.visible,
+        AC.Property.behavior.enable
     ]},
 
     { name: AC.Property.group_names.style, props:[

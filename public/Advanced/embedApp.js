@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_EmbedAppWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_EmbedAppWidget = AC.Widgets.WiziCore_UI_EmbedAppWidget =  AC.Widgets.Base.extend({
     _widgetClass : "WiziCore_UI_EmbedAppWidget",
     _boxTable: null,
@@ -140,7 +140,7 @@ var WiziCore_UI_EmbedAppWidget = AC.Widgets.WiziCore_UI_EmbedAppWidget =  AC.Wid
         if (this.enable() && runnedAppId != val) {
             this.stopApp();
             this._boxTable.show();
-            $(this.form()).unbind(AC.Widgets.WiziCore_Api_Form.onEmbedAppStarted);
+            var form = this.form();
             if (val && val != "") {
                 if (this.mode() != WiziCore_Visualizer.EDITOR_MODE){
                     var self = this,
@@ -152,7 +152,7 @@ var WiziCore_UI_EmbedAppWidget = AC.Widgets.WiziCore_UI_EmbedAppWidget =  AC.Wid
                     if(this._hourglassImage != "Default"){
                         twirlyThing.image = this.hourglassImage();
                     }
-                    this.form()._loadFormForRuntime({appId: val, embedWnd : embedWnd, twirlyThing: twirlyThing}, true, function(eForm){
+                    form._loadFormForRuntime({appId: val, embedWnd : embedWnd, twirlyThing: twirlyThing}, true, function(eForm){
                         self._boxTable.hide();
                         self.base().append(self._boxTable);
                         //embedWnd.width(""); // drop after correct sizes of hourglass
@@ -160,12 +160,9 @@ var WiziCore_UI_EmbedAppWidget = AC.Widgets.WiziCore_UI_EmbedAppWidget =  AC.Wid
                             self.stopApp();
                         }
                         embedWnd.show();
-                        self._setApps(eForm, self.form());
-                        return {parentApp: self.form(), embedWidget: self};
+                        self._setApps(eForm, form);
+                        return {parentApp: form, embedWidget: self};
                     });
-                    $(this.form()).bind(AC.Widgets.WiziCore_Api_Form.onEmbedAppStarted, function(ev){
-                        self.onEmbedAppStarted(ev);
-                    })
                 }
             } else {
                 this._label(this._project['label']);
@@ -182,11 +179,20 @@ var WiziCore_UI_EmbedAppWidget = AC.Widgets.WiziCore_UI_EmbedAppWidget =  AC.Wid
         $(this).trigger(WiziCore_UI_EmbedAppWidget.onStarted);
     },
 
+    onEmbedAppStopped: function(){
+        this._embedContainer.hide();
+        this._boxTable.show();
+        if (this._childApp){
+            $(this).trigger(WiziCore_UI_EmbedAppWidget.onStopped);
+        }
+        this._childApp = null;
+    },
+
     stopApp: function(){
         if (this._childApp) {
             this._childApp._stopRuntimeApp();
         }
-        this._embedContainer.hide();
+        this.onEmbedAppStopped();
     },
 
     isAppLoaded: function(){
@@ -217,9 +223,11 @@ var WiziCore_UI_EmbedAppWidget = AC.Widgets.WiziCore_UI_EmbedAppWidget =  AC.Wid
     },
 
     destroy: function(){
-        if (this._childApp) {
+        if (this._childApp && !this._childApp.isDestroyed()) { //stop visualize done in visualized embededApps
+            $(this._childApp).unbind();
             this._childApp.destroy();
         }
+        this._childApp = null;
         this._super.apply(this, arguments);
     }
 });
@@ -305,10 +313,12 @@ WiziCore_UI_EmbedAppWidget.defaultProps = function(){
 };
 
 WiziCore_UI_EmbedAppWidget.onStarted = "E#EmbedApp#onStarted";
+WiziCore_UI_EmbedAppWidget.onStopped = "E#EmbedApp#onStopped";
 
 WiziCore_UI_EmbedAppWidget.actions = function() {
     var ret = {
-        onStarted: {alias: "widget_event_onstarted", funcview: "onStarted", action: "AC.Widgets.WiziCore_UI_EmbedAppWidget.onStarted", params: "", group: "widget_event_general"}
+        onStarted: {alias: "widget_event_onstarted", funcview: "onStarted", action: "AC.Widgets.WiziCore_UI_EmbedAppWidget.onStarted", params: "", group: "widget_event_general"},
+        onStopped: {alias: "widget_event_appteminate", funcview: "onAppTerminate", action: "AC.Widgets.WiziCore_UI_EmbedAppWidget.onStopped", params: "", group: "widget_event_general"}
     };
     return ret;
 };

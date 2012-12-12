@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_TabWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_TabWidget = AC.Widgets.WiziCore_UI_TabWidget =  AC.Widgets.WiziCore_Widget_Container.extend({
     _widgetClass : "WiziCore_UI_TabWidget",
     _div : null,
@@ -28,7 +28,7 @@ var WiziCore_UI_TabWidget = AC.Widgets.WiziCore_UI_TabWidget =  AC.Widgets.WiziC
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
 
-        this._div = $("<div>").css({width: "100%", "min-height": this.height()});
+        this._div = $("<div>").css({width: "100%", "min-height": this.height(), "background-color":"transparent"});
         var muid = "TabMenu_" + this.htmlId();
         this._menu = $("<ul>");
         this._menu.attr("id", muid);
@@ -354,9 +354,9 @@ var WiziCore_UI_TabWidget = AC.Widgets.WiziCore_UI_TabWidget =  AC.Widgets.WiziC
         }
 
         var border = (this.mode() == WiziCore_Visualizer.EDITOR_MODE) ? 2 : 0;
-        var height = parseInt(this.height()) - this.getMenuHeight() - border - 1;
+        var height = parseInt(this.height() - this.getMenuHeight() - border - 1, 10);
         container.height(height);
-        container.width(parseInt(this.width()) - border);
+        container.width(parseInt(this.width(), 10) - border);
         container.base().width("100%");
     },
 
@@ -389,7 +389,10 @@ var WiziCore_UI_TabWidget = AC.Widgets.WiziCore_UI_TabWidget =  AC.Widgets.WiziC
 
     selectTab: function(index){
         index = this._getIndexById(index);
-        this._div.tabs("select", index);
+        //check for visible:
+        if (this._div.data("tabs") && !$(this._div.data("tabs").panels[index]).is(":visible")){
+            this._div.tabs("select", index);
+        }
     },
 
     enableTab: function(index, mode){
@@ -399,18 +402,34 @@ var WiziCore_UI_TabWidget = AC.Widgets.WiziCore_UI_TabWidget =  AC.Widgets.WiziC
     },
 
     visibleTab: function(index, mode){
-        index = this._getIndexById(index);
         if (this._menu){
-            var eType = (mode) ? "show" : "hide";
-            var tab = this._menu.children().eq(index),
-                cont = $(this._div.data("tabs").panels[index]);
-            tab[eType]();
-            cont[eType]();
+            var currTabIndex = this.getCurrentTabIndex(),
+                self = this;
+            function setVisible(ind){
+                ind = self._getIndexById(ind);
+                if (currTabIndex != ind){
+                    var eType = (mode) ? "show" : "hide";
+                    var tab = self._menu.children().eq(ind),
+                        cont = $(self._div.data("tabs").panels[ind]);
+                    tab[eType]();
+                    cont[eType]();
+                }
+            }
+            
+            if ($.isArray(index)){
+                for (var i = 0, l = index.length; i < l; i++){
+                    setVisible(index[i]);
+                }
+            } else {
+                setVisible(index);
+            }
         }
     },
 
     getCurrentTabIndex: function(){
-        return this._div.tabs("option", "selected");
+        var selected = this._div.tabs("option", "selected");
+        selected = $.isNumeric(selected) ? selected : -1;
+        return selected;
     },
 
     getCurrentTab : function() {
@@ -589,16 +608,17 @@ var WiziCore_UI_TabWidget = AC.Widgets.WiziCore_UI_TabWidget =  AC.Widgets.WiziC
 
     _enable: function(flag) {
         if (this._div != null) {
+            var isTabble = this._div.data("tabs");
             if (flag === false) {
                 var ret = [];
                 for (var i = 0, l = this.children().length; i < l; i++) {
                     ret.push(i);
                 }
                 //disable
-                this._div.tabs('option', 'disabled', ret);
+                isTabble && this._div.tabs('option', 'disabled', ret);
             } else {
                 //enable
-                this._div.tabs('option', 'disabled', []);
+                isTabble && this._div.tabs('option', 'disabled', []);
             }
 
         }
@@ -628,10 +648,6 @@ var WiziCore_UI_TabWidget = AC.Widgets.WiziCore_UI_TabWidget =  AC.Widgets.WiziC
 
             this._super(val);
         }
-    },
-
-    _bg: function(value) {
-        this._super(value, this._div);
     },
 
     updateTabsFontColor : function() {
@@ -740,7 +756,7 @@ WiziCore_UI_TabWidget.capabilities = function() {
             anchors : {left: true, top: true, bottom: false, right: false}, visible : true, opacity : 1,
             widgetStyle: "default", name : "tab1",
             tabs: {rows : [
-                {id: '1', data: ["1", "item1"], ind: 1}
+                {id: '1', data: ["1", "Item1"], ind: 1}
             ]},
             tabBGColors: {
                 useColors: true,
@@ -751,7 +767,8 @@ WiziCore_UI_TabWidget.capabilities = function() {
             displayHourglassOver: "inherit", customCssClasses: "",
             margin : "",
             shadow: "",
-            pWidth: ""
+            pWidth: "",
+            bgColor: '#dddddd'
         },
         isField: false,
         dragAndDrop: false, resizing: false,

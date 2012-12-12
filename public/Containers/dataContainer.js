@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_DataContainerWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_DataContainerWidget = AC.Widgets.WiziCore_UI_DataContainerWidget =  WiziCore_Widget_Container.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationContainer, {
     _widgetClass: "WiziCore_UI_DataContainerWidget",
     _singleData: true,
@@ -20,6 +20,7 @@ var WiziCore_UI_DataContainerWidget = AC.Widgets.WiziCore_UI_DataContainerWidget
 
     draw : function(){
         this._super.apply(this, arguments);
+        this.base().addClass("ac-widget-overflow-border-radius");
     },
 
 
@@ -154,7 +155,8 @@ WiziCore_UI_DataContainerWidget._props =  [{ name: AC.Property.group_names.gener
             AC.Property.layout.repeat,
             AC.Property.layout.zindex,
             AC.Property.layout.repeat,
-            AC.Property.layout.alignInContainer
+            AC.Property.layout.alignInContainer,
+            AC.Property.layout.scrolling
         ]},
     { name: AC.Property.group_names.behavior, props:[
             AC.Property.behavior.dragAndDrop,
@@ -212,6 +214,7 @@ WiziCore_UI_DataContainerWidget.capabilities = function() {
             enable: true,
             dragAndDrop: false, resizing: false,
             readonly: false,
+            scrolling: "none",
             layout: 'absolute',
             pWidth: ""
         },

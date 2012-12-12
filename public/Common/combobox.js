@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ComboBoxWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ComboBoxWidget = AC.Widgets.WiziCore_UI_ComboBoxWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationList, WiziCore_Source_Widget_PagingAPI, {
     _widgetClass: "WiziCore_UI_ComboBoxWidget",
     _comboBox: null,
@@ -22,14 +22,13 @@ var WiziCore_UI_ComboBoxWidget = AC.Widgets.WiziCore_UI_ComboBoxWidget =  AC.Wid
             this._project["selectedIndex"] = -1;
         }
     },
-    remove: function() {
+    onRemove: function() {
         if (this._checkRepeatBeforeRemove()){
             return;
         }
         if (this._comboBox){
             this._comboBox.destroy();
         }
-        this._super();
     },
 
     draw: function() {
@@ -83,7 +82,6 @@ var WiziCore_UI_ComboBoxWidget = AC.Widgets.WiziCore_UI_ComboBoxWidget =  AC.Wid
         this.shadow = this.themeProperty('shadow', this._shadow);
         this.opacity = this.themeProperty('opacity', this._opacity);
         this.tabindex = this.htmlProperty('tabindex', this._tabindex);
-        this.readonly = this.htmlProperty('readonly', this._readonly);
 
         this.currPage = this.normalPropBeforeSet('currPage', this._currPage);
         this.elementsPerPage = this.normalPropBeforeSet('elementsPerPage', this._elementsPerPage);
@@ -235,7 +233,6 @@ var WiziCore_UI_ComboBoxWidget = AC.Widgets.WiziCore_UI_ComboBoxWidget =  AC.Wid
         this._opacity(this.opacity());
         this._shadow(this.shadow());
         this._updateEnable();
-        this._updateReadonly();
         this.selectOption(this._project["selectedIndex"]);
     },
 
@@ -309,8 +306,8 @@ var WiziCore_UI_ComboBoxWidget = AC.Widgets.WiziCore_UI_ComboBoxWidget =  AC.Wid
 
     setFocus: function(){
         this.base().find(".simple-combo-input").focus();
-        if (this.readonly() === true)
-            this.closeAll();
+//        if (this.readonly() === true)
+//            this.closeAll();
     },
 
     selectContents: function(){
@@ -436,12 +433,7 @@ var WiziCore_UI_ComboBoxWidget = AC.Widgets.WiziCore_UI_ComboBoxWidget =  AC.Wid
         }
     },
 
-    _readonly: function(flag){
-        if (this._comboBox != null){
-            flag = (flag === true) ? true : false;
-            this._comboBox.canOpenSelect(!flag);
-        }
-    },
+    readonly: function(){},
 
     _tabindex: function(value) {
         this._super(value, this.base().find(".simple-combo-input"));
@@ -797,8 +789,7 @@ WiziCore_UI_ComboBoxWidget._props = [
         AC.Property.behavior.dragAndDrop,
         AC.Property.behavior.resizing,
         AC.Property.behavior.visible,
-        AC.Property.behavior.enable,
-        AC.Property.behavior.readonly
+        AC.Property.behavior.enable
     ]},
     { name: AC.Property.group_names.data, props:[
         AC.Property.data.view,
@@ -850,7 +841,7 @@ WiziCore_UI_ComboBoxWidget.emptyProps = function() {
 WiziCore_UI_ComboBoxWidget.defaultProps = function() {
     return {valName: "selectedValue", x: "0", y: "0", height: "20", width: "120",
         zindex: "auto", enable: true, anchors: {left: true, top: true, bottom: false, right: false}, visible: true,
-        readonly: false, data: [
+        data: [
             ["Label", "Value", ""]
         ], opacity: 1,
         pWidth: "",

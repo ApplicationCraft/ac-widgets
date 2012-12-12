@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ListBoxWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ListBoxWidget = AC.Widgets.WiziCore_UI_ListBoxWidget = AC.Widgets.ListBoxWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationList, WiziCore_Source_Widget_PagingAPI, {
     _widgetClass: "WiziCore_UI_ListBoxWidget",
     _div: null,

@@ -1,7 +1,7 @@
     /**
  * @lends       WiziCore_UI_CheckBoxWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_CheckBoxWidget = AC.Widgets.WiziCore_UI_CheckBoxWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationCheckbox, {
     _widgetClass: "WiziCore_UI_CheckBoxWidget",
     _input: null,
@@ -40,12 +40,16 @@ var WiziCore_UI_CheckBoxWidget = AC.Widgets.WiziCore_UI_CheckBoxWidget =  AC.Wid
         input.attr("id", tuid + "_ch");
 
         var label = $('<label>');
-        label.click(function(){
+        div.bind('click', function(){
             var isDisabled = input.attr("disabled");
             if (isDisabled === undefined || isDisabled === false){
                 self._checked(!input.is(":checked"));
                 input.change();
             }
+        });
+
+        input.bind('click', function(ev) {
+            ev.stopPropagation();
         });
 
         this._input = input;
@@ -56,6 +60,7 @@ var WiziCore_UI_CheckBoxWidget = AC.Widgets.WiziCore_UI_CheckBoxWidget =  AC.Wid
 
         this._div = div;
         this.base().prepend(div);
+        this.base().css("overflow", "hidden");
 
         this.bindEvent(WiziCore_UI_CheckBoxWidget.onChange);
 
@@ -180,12 +185,12 @@ var WiziCore_UI_CheckBoxWidget = AC.Widgets.WiziCore_UI_CheckBoxWidget =  AC.Wid
         return !triggerEvent.isPropagationStopped();
     },
 
-    destroy: function() {
-        try{
-            this._input.unbind("click");
-        }
-        catch(e) {}
-        this._super();
+    onRemove: function() {
+        if (this._div)
+            this._div.unbind('click');
+
+        if (this._input)
+            this._input.unbind('click');
     },
 
     _beforeLabel: function(text) {
@@ -243,7 +248,9 @@ var WiziCore_UI_CheckBoxWidget = AC.Widgets.WiziCore_UI_CheckBoxWidget =  AC.Wid
         var h = this.height();
         this._div.height(h);
         if ($.browser.msie) {
-            this.tableBase().css({'min-width': this.width(), width: ''});
+            if (this.getContainerLayoutType() == WiziCore_Widget_Layout.LAYOUT_TYPES.Absolute){
+                this.tableBase().css({'min-width': this.width(), width: ''});
+            }
         }
     },
 
@@ -360,8 +367,7 @@ WiziCore_UI_CheckBoxWidget.props = function() {
  * @return {Object} default properties
  */
 WiziCore_UI_CheckBoxWidget.emptyProps = function() {
-    var ret = {bgColor: "", fontColor: "black", font: "normal 12px verdana"};
-    return ret;
+    return {bgColor: "", fontColor: "black", font: "normal 12px verdana"};
 };
 /**
  * Return default inline edit prop
@@ -376,7 +382,7 @@ WiziCore_UI_CheckBoxWidget.inlineEditPropName = function() {
  * @return {Object} default properties
  */
 WiziCore_UI_CheckBoxWidget.defaultProps = function() {
-    var ret = {
+    return {
         pWidth: "",
         margin: "", alignInContainer: 'left',
         x: "0",
@@ -405,7 +411,6 @@ WiziCore_UI_CheckBoxWidget.defaultProps = function() {
         resizing: false,
         tabStop: true
     };
-    return ret;
 };
 WiziCore_UI_CheckBoxWidget.isField = function() {return true};
 })(jQuery,window,document);

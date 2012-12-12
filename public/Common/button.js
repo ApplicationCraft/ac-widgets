@@ -1,7 +1,7 @@
 /**
  * @lends       ButtonWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ButtonWidget = AC.Widgets.WiziCore_UI_ButtonWidget = AC.Widgets.Base.extend({
     _widgetClass: "WiziCore_UI_ButtonWidget",
     _input: null,
@@ -130,7 +130,13 @@ var WiziCore_UI_ButtonWidget = AC.Widgets.WiziCore_UI_ButtonWidget = AC.Widgets.
 
     _enable: function(flag) {
         this._super(flag, this._input);
-        (flag === false) ? this._input.addClass('ui-state-disabled'): this._input.removeClass('ui-state-disabled');
+        if (flag === false) {
+            this._input.addClass('ui-state-disabled');
+            this.base().css('cursor', 'default');
+        } else {
+            this._input.removeClass('ui-state-disabled');
+            this.base().css('cursor', 'pointer');
+        }
         this.showEnableDiv(flag);
     },
 
@@ -170,6 +176,9 @@ var WiziCore_UI_ButtonWidget = AC.Widgets.WiziCore_UI_ButtonWidget = AC.Widgets.
     },
 
     _label: function(text) {
+        if (!this._input)
+            return;
+
         var res = this.getTrValueAddLngAttr(text, this._input);
 
         if (res === null) res = "";

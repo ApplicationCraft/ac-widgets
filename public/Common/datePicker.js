@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
     var widget = AC.Widgets.DatePicker = AC.Widgets.WiziCore_UI_DatePickerWidget = function() {
         this.init.apply(this, arguments);
@@ -178,7 +178,13 @@
 
     p.showDatePicker = function() {
         var self = this;
-        if (this.readonly() === true) {
+        var readonly = this.readonly();
+        self.traverseParent(function(item){
+            if (typeof(item.readonly) == "function"){
+                readonly = readonly || item.readonly();
+            }
+        });
+        if (readonly === true) {
             return;
         }
         if (this._dateDiv != null) {
@@ -375,12 +381,11 @@
         this._tDefDates.cnt = 0;
     };
 
-    p.remove = function() {
+    p.onRemove = function() {
         this.destroyDatePickerDialog();
         if (this._checkRepeatBeforeRemove()){
             return;
         }
-        widget._sc.remove.call(this);
     };
 
     p.setFocus = function() {
@@ -497,7 +502,8 @@
         this.onSelectDate(ret);
     };
 
-    p._readonly = function(flag) {
+    p._readonly = function() {
+        var flag = this.readonly() || this.disableKeyboardEntry();
         widget._sc._readonly.call(this, flag, this._input);
     };
 
@@ -676,6 +682,7 @@
     p.opacity = AC.Property.theme('opacity', p._opacity);
     p.tabindex = AC.Property.html('tabindex', p._tabindex);
     p.readonly = AC.Property.html('readonly', p._readonly);
+    p.disableKeyboardEntry = AC.Property.html('disableKeyboardEntry', p._readonly);
     p.range = AC.Property.normal('range');
     p.dateFormat = AC.Property.html('dateFormat', p._dateFormat);
 
@@ -708,8 +715,8 @@
     var actions = {
         onClose: {alias: "widget_event_onclose", funcview: "onClose", action: "AC.Widgets.DatePicker.onClose", params: "value", group: "widget_event_general"},
         onSelectDate: {alias: "widget_event_onselectdate", funcview: "onSelectDate", action: "AC.Widgets.DatePicker.onSelectDate", params: "value", group: "widget_event_general"},
-        dataLoaded : {alias : "widget_event_ondataloaded", funcview : "onDataLoaded", action : "AC.Widgets.DatePicker.onDataLoaded", params : "error, data", group : "widget_event_data", sweight : 5},
-        dataReset : {alias : "widget_event_ondatareset", funcview : "onDataReset", action : "AC.Widgets.DatePicker.onDataReset", params : "", group : "widget_event_data"}
+        dataLoaded : {alias : "widget_event_ondataloaded", funcview : "onDataLoaded", action : "AC.Widgets.Base.onDataLoaded", params : "error, data", group : "widget_event_data", sweight : 5},
+        dataReset : {alias : "widget_event_ondatareset", funcview : "onDataReset", action : "AC.Widgets.Base.onDataReset", params : "", group : "widget_event_data"}
     };
     actions = jQuery.extend({}, AC.Widgets.Base.actions(), actions);
 
@@ -747,6 +754,13 @@
             AC.Property.behavior.visible,
             AC.Property.behavior.enable,
             AC.Property.behavior.readonly,
+            {
+                name: "disableKeyboardEntry",
+                type : "boolean",
+                set: "disableKeyboardEntry",
+                get: "disableKeyboardEntry",
+                alias: "widget_datepicker_disable_keyboard"
+            },
             AC.Property.behavior.range,
             AC.Property.behavior.dateMin,
             AC.Property.behavior.dateMax,
@@ -793,9 +807,8 @@
         dragAndDrop: false, resizing: false,
         dateFormat: "mm/dd/yy", dateTimezone: "local",
         dateMin: null, dateMax: null,
-        shadow: ""
+        shadow: "", disableKeyboardEntry: false
     };
-
 
     // method to get access to static values
     /**

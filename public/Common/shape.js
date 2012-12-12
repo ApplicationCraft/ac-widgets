@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ShapeWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ShapeWidget = AC.Widgets.WiziCore_UI_ShapeWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_Methods_Widget_ActionClick, {
     _widgetClass : "WiziCore_UI_ShapeWidget",
     _div : null,
@@ -32,10 +32,12 @@ var WiziCore_UI_ShapeWidget = AC.Widgets.WiziCore_UI_ShapeWidget =  AC.Widgets.B
     },
 
     onClick: function(ev) {
-        var triggerEvent = new jQuery.Event(AC.Widgets.WiziCore_Widget_Base.onClick);
+        var triggerEvent = new jQuery.Event(AC.Widgets.WiziCore_Widget_Base.onClick),
+            pj = this.pageJump(),
+            app = this.form();
         acDebugger.systemLog("triggerEvent", triggerEvent, "self.id()", this.id());
         $(this).trigger(triggerEvent, [ev]);
-        (!triggerEvent.isPropagationStopped()) && this.onActionClick(ev, this.pageJump());
+        (!triggerEvent.isPropagationStopped()) && this.onActionClick(ev, pj, app);
         ev.stopPropagation();
     },
 
@@ -90,6 +92,8 @@ var WiziCore_UI_ShapeWidget = AC.Widgets.WiziCore_UI_ShapeWidget =  AC.Widgets.B
 
     _enable: function(val){
         (val === false) ? this._div.addClass('ui-state-disabled'): this._div.removeClass('ui-state-disabled');
+        if (this.mode() != WiziCore_Visualizer.EDITOR_MODE)
+            this.updateCursorByAction(val === true);
     },
 
     _bg: function(val){

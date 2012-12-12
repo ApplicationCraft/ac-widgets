@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ColorPickerWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ColorPickerWidget = AC.Widgets.WiziCore_UI_ColorPickerWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple, {
     _widgetClass: "WiziCore_UI_ColorPickerWidget",
     _colorTable: null,

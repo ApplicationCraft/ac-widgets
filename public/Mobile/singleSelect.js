@@ -1,13 +1,13 @@
 /**
  * @lends       WiziCore_UI_SingleSelectMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_SingleSelectMobileWidget = AC.Widgets.WiziCore_UI_SingleSelectMobileWidget =  AC.Widgets.WiziCore_UI_BaseMobileWidget.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationList, WiziCore_Source_Widget_PagingAPI, {
     _widgetClass: "WiziCore_UI_SingleSelectMobileWidget",
     _div: null,
+    _btnDiv: null,
     _reloadData: false,
     _lineSpaceStyle: null,
-//    _label: null,
     _dataPropName: "data",
 
 
@@ -159,10 +159,27 @@ var WiziCore_UI_SingleSelectMobileWidget = AC.Widgets.WiziCore_UI_SingleSelectMo
 //        this._labelDisabled(this.labelDisabled());
     },
 
+    _beforeLabel: function(text) {
+        if (this.form().language() != null && !this.form()._skipTokenCreation) {
+            var isToken = WiziCore_Helper.isLngToken(text),
+                token = isToken ? text : ('ac-' + this.id());
+
+            if (!isToken)
+                this.form().addTokenToStringTable(this.id(), this.name(), token, text);
+
+            return token;
+        } else
+            return text;
+    },
+
+    _label: function() {
+        this._redraw();
+    },
+
     _enable: function(val){
         if (this._select) {
             val = (val === true) ? "enable" : "disable";
-            this._select.selectmenu(val);
+            this._select.data("selectmenu") && this._select.selectmenu(val);
         }
     },
 
@@ -170,15 +187,39 @@ var WiziCore_UI_SingleSelectMobileWidget = AC.Widgets.WiziCore_UI_SingleSelectMo
         var o = this._getJQMOptions();
         o.nativeMenu = WiziCore_Helper.isMobile();
         this._select.selectmenu(o);
+
+        if (this._select.data('selectmenu').listbox){
+            //check for desktop popup
+            this._select.data('selectmenu').listbox.popup({transition: "none", theme: "a"});
+        }
+
+        this._btnDiv = WiziCore_Helper.isMobile() ? this._div.find('.m-ui-btn') : this.base().find('a');
         this._updateEnable();
         WiziCore_Helper.pageChangingHook(this.form(), this._select, this.id(), this, {disabled: true});
     },
 
-    remove: function(){
+    _shadow: function(val, div){
+        this._super(val, div || this._btnDiv);
+    },
+
+    _getJQMOptions : function() {
+        var options = this._super();
+        if (this.placeholder) {
+            options['usePlaceholder'] = this.placeholder ;
+        }
+        return options;
+    },
+
+    onRemove: function(){
         if (this._checkRepeatBeforeRemove()){
             return;
         }
-        this._super.apply(this, arguments);
+        if (this._select) {
+            var select = this._select;
+            select.data("selectmenu") && select.selectmenu("close");
+            $("#select-" + this.htmlId() + "-menu").parent().trigger("closed");
+            select.data("selectmenu") && select.selectmenu("destroy");
+        }
         WiziCore_Helper.removePageChangingHook(this.form(), this.id());
     },
 
@@ -228,7 +269,6 @@ var WiziCore_UI_SingleSelectMobileWidget = AC.Widgets.WiziCore_UI_SingleSelectMo
         if (this._select == null) {
             return;
         }
-
         var self = this;
         switch (event) {
             case WiziCore_UI_SingleSelectMobileWidget.onChange:

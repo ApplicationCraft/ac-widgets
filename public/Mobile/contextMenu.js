@@ -1,18 +1,18 @@
 /**
  * @lends       WiziCore_UI_ContextMenuMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
     var listenWidgets = [];
 
-    function findOption(target) {
+    function findWidget(target) {
         return $(target).closest('.ac-widget-item');
     }
 
     function eventCallback(ev) {
-        var option = findOption(ev.target);
-        if (option.length > 0) {
-            var widget = option.data("widget"), w;
+        var wItems = findWidget(ev.target), widget, w;
+        if (wItems.length > 0) {
+            widget = wItems.data("widget");
             for (var i = 0, l = listenWidgets.length; i < l; i++){
                 w = listenWidgets[i];
                 //call in all listen objects function checkClickEvent
@@ -21,7 +21,6 @@
                 }
             }
         }
-
     }
 
     function bindClickToDocument(){
@@ -48,6 +47,10 @@
 var WiziCore_UI_ContextMenuMobileWidget = AC.Widgets.WiziCore_UI_ContextMenuMobileWidget =  AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.extend({
     _widgetClass: "WiziCore_UI_ContextMenuMobileWidget",
     _oldVal: null,
+    _popup: null,
+    _select: null,
+    _isContextMenuOpened: false,
+    _mainCnt: null,
 
     /**
      * Description of constructor
@@ -68,13 +71,34 @@ var WiziCore_UI_ContextMenuMobileWidget = AC.Widgets.WiziCore_UI_ContextMenuMobi
         this.wparent = this.normalProperty('wparent');
     },
 
-    remove: function() {
+    onRemove: function() {
         if (this._checkRepeatBeforeRemove()){
             return;
         }
         unBindClickEvent(this);
-        $(this.page()).unbind(AC.Widgets.WiziCore_Api_Page.onPageLeft+'.'+this.selectElemId() );
-        this._super();
+
+        $(this.repeatCompatiblePage()).unbind(AC.Widgets.WiziCore_Api_Page.onPageLeft+'.'+this.htmlId() );
+
+        if (this._popup) {
+            this._popup.unbind('closed.' + this.htmlId());
+            this._popup.data("popup") && this._popup.popup('close');
+//            this._popup.trigger("closed");
+            this._popup.remove();
+            this._popup = null;
+        }
+
+        if (this._select) {
+            this._select.remove();
+            this._select = null;
+        }
+
+        if (this._mainCnt) {
+            this._mainCnt.remove();
+            this._mainCnt = null;
+        }
+
+        this._isContextMenuOpened = false;
+
     },
 
     checkClickEvent : function(event, w){
@@ -85,13 +109,15 @@ var WiziCore_UI_ContextMenuMobileWidget = AC.Widgets.WiziCore_UI_ContextMenuMobi
         var widgetUid = (!widget.uid) ? widget : widget.uid;
         if (widgetUid == w.id()){
             this.openMenu();
+            event.preventDefault();
+            event.stopImmediatePropagation();
         }
     },
 
     draw: function() {
         var _self = this;
         bindClickToDocument && bindClickToDocument();
-        this._mainCnt = $("<div style='width:100%; height:100%'></div>");
+        this._mainCnt = $("<div style='width:100%; height:100%; position: relative;'></div>");
 
         this.base().append(this._mainCnt);
         this._super.apply(this, arguments);
@@ -100,12 +126,14 @@ var WiziCore_UI_ContextMenuMobileWidget = AC.Widgets.WiziCore_UI_ContextMenuMobi
         } else {
             bindClickEvent(this);
 
-            this.base().css({display : "none"});
-
-            $(this.page()).bind(AC.Widgets.WiziCore_Api_Page.onPageLeft+'.'+_self.selectElemId(), function () {
+            $(this.repeatCompatiblePage()).bind(AC.Widgets.WiziCore_Api_Page.onPageLeft+'.'+_self.htmlId(), function () {
                 if (_self._isContextMenuOpened){
                     _self._isContextMenuOpened = false;
-                    _self._select.selectmenu("close");
+
+                    if (_self._popup) {
+                        self._popup.data("popup") && _self._popup.popup('close');
+//                        _self._popup.trigger("closed");
+                    }
                 }
             });
 
@@ -114,27 +142,15 @@ var WiziCore_UI_ContextMenuMobileWidget = AC.Widgets.WiziCore_UI_ContextMenuMobi
 
     openMenu : function(){
         var _self = this;
-        if (_self._isContextMenuOpened == true){
+        if (_self._isContextMenuOpened == true || !_self.enable()){
             return;
         }
         _self.onPreShow();
-        _self._select.selectmenu("open");
-        _self._isContextMenuOpened = true;
-        var popupmenu = $("#" + _self.selectElemId() + "-menu").parent();
-        var w = popupmenu.width(), h = popupmenu.height(), sW = $(window).width(), sH = $(window).height();
-        if (h < sH){
-            var screen = popupmenu.prev();
-            screen.css( {"background-color" : "black", opacity : 0.4} );
-            popupmenu.css( { left :  parseInt( ( ( (sW - w) / 2 ) ), 10) + "px", top :  parseInt( ( ( (sH - h) / 2 ) ), 10) + "px", position : "fixed" } );
-            screen.one("vclick", function(ev){
-                ev.preventDefault();
-            });
+
+        if (this._popup) {
+            this._popup.data("popup") && this._popup.popup('open');
+            _self._isContextMenuOpened = true;
         }
-
-    },
-
-    selectElemId: function() {
-        return "select-" + this.htmlId();
     },
 
     _data: function(val) {
@@ -143,52 +159,51 @@ var WiziCore_UI_ContextMenuMobileWidget = AC.Widgets.WiziCore_UI_ContextMenuMobi
             return;
         }
 
-        this.removeEvents(AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.onChange);
-
-        if (this._div != undefined) {
-            //remove old created element
-            $("#" + this.selectElemId() + "-menu").parent().remove();
-
-            this._div.empty();
-            this._div.remove();
+        if (this._popup != undefined) {
+            this._popup.unbind('closed.' + this.htmlId());
+            this._popup.data("popup") && this._popup.popup('close');
+            this._popup.empty();
+            this._popup.remove();
         }
 
-        this._div = $('<div/>');
-        var selectDivId = "selectDiv-" + this.htmlId();
-        this._div.attr("id", selectDivId);
-        var label = $('<label  data-native-menu="false"  class="select" for="' + selectId + '"></label>'),
-            div = this._div,
-            selectId = this.selectElemId(),
-            select = this._select = $('<select name="' + selectId + '" id="' + selectId + '"/>'),
-            i = 0, l = val ? val.length : 0;
+        this._popup = $('<div data-role="popup"/>');
+        var i = 0, l = val ? val.length : 0, self = this;
 
-        div.append(label);
-        div.append(select);
+        this._select = $("<ul data-inset='true'/>");
 
-        select.data('native-menu', false);
+        this._popup.append(this._select);
+
+        this._popup.bind('closed.' + this.htmlId(),function(event, ui) {
+                self._isContextMenuOpened = false;
+        });
+
         if (this._isDataManual != undefined){
             var res = this._getStartAndLength(l);
             i = res.i;
             l = res.l;
         }
 
-        var o = $("<option style='display: none;'>").attr({"value": ""}).html("");
-        select.append(o);
-
         if (val){
             for (; i < l; ++i) {
-                var optionText = (val[i][0]) ? val[i][0].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&") : "";
-                if (optionText == "" || optionText == " "){
-                    optionText = "&nbsp;"
+                var labelText = (val[i][0]) ? val[i][0].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&") : "";
+                if (labelText == "" || labelText == " "){
+                    labelText = "&nbsp;"
                 }
-                var o = $("<option>").attr({"value": i}).html("" + optionText);
-                select.append(o);
+                var li = $("<li data-icon='false'><a href='#'>" + labelText + "</a></li>");
+                li.data('optionValue', val[i]);
+                li.data('pos', i);
+                li.data('widget', this);
+                this._select.append(li);
             }
         }
 
-        this.addEvents(AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.onChange);
+        this._select.delegate('li', 'vclick', function(ev){
+            var option = $(ev.currentTarget);
+            var widget = option.data("widget");
+            widget && widget.enable() !== false && widget.onItemSelected.call(widget, option);
+        });
 
-        this._mainCnt.append(this._div);
+        this._mainCnt.append(this._popup);
 
         if (this._isDrawn) {
             this._refresh();
@@ -196,14 +211,12 @@ var WiziCore_UI_ContextMenuMobileWidget = AC.Widgets.WiziCore_UI_ContextMenuMobi
         if (this.mode() != WiziCore_Visualizer.EDITOR_MODE){
             this.base().css({display : "none"});
         }
-        //this._super();
     },
 
     _refresh: function() {
         var o = this._getJQMOptions();
-        o.nativeMenu = false;
-        o.raw = true;
-        this._select.selectmenu(o);
+        this._popup.popup({transition: "none"});
+        this._select.listview(o);
         this._updateEnable();
     },
 
@@ -221,21 +234,24 @@ var WiziCore_UI_ContextMenuMobileWidget = AC.Widgets.WiziCore_UI_ContextMenuMobi
         $(self).trigger(triggerEvent);
     },
 
-    /**
-     * On onChange event
-     */
-    onChange: function(ev) {
-        var self = ev.data.self;
-        var triggerEvent = new jQuery.Event(WiziCore_UI_ContextMenuMobileWidget.onClick);
-        var pos = self._select.val();
-        self._project['selectedIndex'] = pos;
-        if (pos != "" && self._isContextMenuOpened === true){
-            var data = self.data();
-            var val = (pos != null)? {label: data[pos][0], value: data[pos][1], index: pos}: null;
-            $(self).trigger(triggerEvent, [val]);
-        }
-        self._isContextMenuOpened = false;
+    onItemSelected: function(option) {
+        var triggerEvent = new jQuery.Event(WiziCore_UI_ContextMenuMobileWidget.onClick),
+            wasOpened = this._isContextMenuOpened;
+        var pos = option.data('pos');
+        this._project['selectedIndex'] = pos;
 
+        if (this._popup) {
+            this._popup.data("popup") && this._popup.popup('close');
+//            this._popup.trigger("closed");
+        }
+
+        this._isContextMenuOpened = false;
+
+        if (pos !== "" && wasOpened === true){
+            var data = this.data();
+            var val = (pos != null)? {label: data[pos][0], value: data[pos][1], index: pos}: null;
+            $(this).trigger(triggerEvent, [val]);
+        }
     },
 
     selectOption: function(ind){

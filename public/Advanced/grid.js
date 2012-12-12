@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_GridWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_GridWidget = AC.Widgets.WiziCore_UI_GridWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationGrid, WiziCore_Source_Widget_PagingAPI, {
     _widgetClass: "WiziCore_UI_GridWidget",
     _table: null,
@@ -144,7 +144,7 @@ var WiziCore_UI_GridWidget = AC.Widgets.WiziCore_UI_GridWidget =  AC.Widgets.Bas
         }
     },
 
-    remove: function() {
+    onRemove: function() {
         if (this._checkRepeatBeforeRemove()){
             return;
         }
@@ -156,7 +156,6 @@ var WiziCore_UI_GridWidget = AC.Widgets.WiziCore_UI_GridWidget =  AC.Widgets.Bas
             }
             this._table = undefined;
         }
-        this._super();
     },
 
     enableAutoWidth: function(mode) {
@@ -189,9 +188,12 @@ var WiziCore_UI_GridWidget = AC.Widgets.WiziCore_UI_GridWidget =  AC.Widgets.Bas
 
     setSelectedRow: function(index){
         var data = this._table.getDataLink();
-        if (data && index != undefined && data[index]){
+        if (index < 0){
+            this.clearSelection();
+        } else if (data && index != undefined && data[index]){
             this._table.selectRow(data[index].id);
         }
+
     },
 
     /**
@@ -681,8 +683,13 @@ var WiziCore_UI_GridWidget = AC.Widgets.WiziCore_UI_GridWidget =  AC.Widgets.Bas
             var resData = data,
                 rows = resData.rows,
 //                dataRows = data.rows,
-                r, l, i , j, row, dataRow, rowId, rowKey;
-            for (r = 0, l = rows.length; r < l; ++r) {
+                r = 0, l = rows.length, i , j, row, dataRow, rowId, rowKey, newRows = [];
+            if (this._isDataManual != undefined){
+                var res = this._getStartAndLength(l);
+                r = res.i;
+                l = res.l;
+            }
+            for (; r < l; ++r) {
                 row = rows[r];
 //                dataRow = dataRows[r];
                 rowId = row.id;
@@ -697,11 +704,13 @@ var WiziCore_UI_GridWidget = AC.Widgets.WiziCore_UI_GridWidget =  AC.Widgets.Bas
                 else
                     row.data.userData = {data_key : rowKey};
 
+                newRows[r] = row;
 
 //                for (i = 0, j = row.data.length; i < j; i++) {
 //                    row.data[i] = WiziCore_Helper.isLngToken(row.data[i]) ? this._getTranslatedValue(row.data[i]) : row.data[i];
 //                }
             }
+            resData.rows = newRows;
             this._table.clear();
             this._table.rowsToMatrix(resData, this._getTableOpt());
         }
@@ -1118,7 +1127,7 @@ var WiziCore_UI_GridWidget = AC.Widgets.WiziCore_UI_GridWidget =  AC.Widgets.Bas
     },
 
     getSelectedRow: function(){
-        var ret = (this._table != null) ? this._table.getSelectedRow() : -1;
+        var ret = (this._table != null) ? this._table.getSelectedRow() : undefined;
         return ret;
     },
 

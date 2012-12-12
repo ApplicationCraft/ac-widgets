@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     var triggerObject  = {};
 
     // This top section should always be present
@@ -13,10 +13,10 @@
     function loadYoutubeApiLib() {
         if (typeof YT == "undefined" || typeof YT.Player != "function") {
             if (WiziCore_Helper.isPhoneGapOnline()) {
-                jQuery.getScript("http://www.youtube.com/player_api")
-                    .fail(function () {
-                        throw "error loading youtube api";
-                    });
+                jQuery.getScript((document.location.protocol == "https:" ? "https:" : "http:") + "//www.youtube.com/player_api")
+                .fail(function () {
+                    throw "error loading youtube api";
+                });
             }
         }
         loadYoutubeApiLib = null;
@@ -24,6 +24,7 @@
 
     AC.extend(widget, AC.Widgets.Base);
     var p = widget.prototype;
+    AC.copyExtension(p, AC.WidgetExt.DataIntegration.Simple);
 
     // Define the widget Class name
     p._widgetClass = "Youtube";
@@ -42,17 +43,8 @@
         widget._sc.init.apply(this, arguments);
     };
 
-    p.destroy = function() {
-        if (this._cont) {
-            this._cont.remove();
-            this._cont = null;
-        }
-
-        widget._sc.destroy.apply(this, arguments);
-    };
-
     p._onInitLanguage = function() {
-        this.source(this.source());
+        this.videoId(this.videoId());
     };
 
     p._onSTUpdated = function() {
@@ -80,7 +72,11 @@
             this._videoId(this._project['videoId']);
         }
 
-        this._updateEnable();
+//        this._updateEnable();
+    };
+
+    p.isIncludedInSchema = function() {
+        return false;
     };
 
     p.addOneApiInitedEvent = function() {
@@ -97,10 +93,10 @@
             this._cont.height(this.height() + 'px');
     };
 
-    p._enable = function(flag) {
-        widget._sc._enable.apply(this, arguments);
-        this.showEnableDiv(flag === true);
-    };
+//    p._enable = function(flag) {
+//        widget._sc._enable.apply(this, arguments);
+//        this.showEnableDiv(flag === true);
+//    };
 
     p.initDomState = function() {
         widget._sc.initDomState.call(this);
@@ -114,7 +110,7 @@
     p._beforeVideoId = function(value) {
         if (this.form().language() != null && !this.form()._skipTokenCreation) {
             var isToken = WiziCore_Helper.isLngToken(value),
-                token = isToken ? value : ('ac-' + this.id());
+            token = isToken ? value : ('ac-' + this.id());
 
             if (!isToken)
                 this.form().addTokenToStringTable(this.id(), this.name(), token, value);
@@ -125,8 +121,11 @@
     };
 
     p._videoId = function(value) {
+        if (!this._cont)
+            return;
+
         var trVal = WiziCore_Helper.isLngToken(value) ? this._getTranslatedValue(value) : value,
-            self = this;
+        self = this;
 
         clearPlayer.call(this);
 
@@ -134,7 +133,7 @@
             return;
 
         var playerId = this.htmlId() + "_player",
-            isEditorMode = this.mode() == WiziCore_Visualizer.EDITOR_MODE;
+        isEditorMode = this.mode() == WiziCore_Visualizer.EDITOR_MODE;
         if (!this._playerDiv) {
             this._playerDiv = $("<div id='" + playerId + "' />");
             this._cont.append(this._playerDiv);
@@ -142,10 +141,16 @@
 
         if (WiziCore_Helper.checkForIE7()) {
             this._playerDiv.append('<span>You need Flash player 8+ and JavaScript enabled to view this video.</span>');
-            var params = { allowScriptAccess: "always", wmode: "opaque", allowFullScreen: true },
-                atts = { id: playerId },
-                origin = (window.location.origin) ? window.location.origin : window.location.protocol + "//" + window.location.host + "/",
-                sourceUrl = "http://www.youtube.com/v/" + trVal + "?enablejsapi=1&playerapiid=" + playerId + "&version=3&origin=" + origin;
+            var params = {
+                allowScriptAccess: "always", 
+                wmode: "opaque", 
+                allowFullScreen: true
+            },
+            atts = {
+                id: playerId
+            },
+            origin = (window.location.origin) ? window.location.origin : window.location.protocol + "//" + window.location.host + "/",
+            sourceUrl = (document.location.protocol == "https:" ? "https:" : "http:") + "//www.youtube.com/v/" + trVal + "?enablejsapi=1&playerapiid=" + playerId + "&version=3&origin=" + origin;
 
             if (!isEditorMode)
                 sourceUrl += '&autoplay=' + (this.autoplay() ? 1 : 0);
@@ -191,7 +196,9 @@
         var playerId = this.htmlId() + "_player";
         this._player = document.getElementById(playerId);
         if (!this._player || typeof this._player.playVideo != 'function')
-            setTimeout(function() { getYTFlashPlayerRef.call(self); }, 200);
+            setTimeout(function() {
+                getYTFlashPlayerRef.call(self);
+            }, 200);
         else {
             this._isPlayerReady = true;
             this.volume(this._project['volume']);
@@ -203,14 +210,20 @@
 
     function generateFlashCallbacks() {
         var self = this,
-            htmlIdWithoutMinus = this.htmlId().replace(new RegExp("(-)", 'g'), ""),
-            stageChangeFn = 'ac_yt_onStateChange_' + htmlIdWithoutMinus,
-            onErrorFn = 'ac_yt_onError_' + htmlIdWithoutMinus,
-            qualityChangeFn = 'ac_yt_onPlaybackQualityChange_' + htmlIdWithoutMinus;
+        htmlIdWithoutMinus = this.htmlId().replace(new RegExp("(-)", 'g'), ""),
+        stageChangeFn = 'ac_yt_onStateChange_' + htmlIdWithoutMinus,
+        onErrorFn = 'ac_yt_onError_' + htmlIdWithoutMinus,
+        qualityChangeFn = 'ac_yt_onPlaybackQualityChange_' + htmlIdWithoutMinus;
 
-        window[stageChangeFn] = function(ev) { self._onStateChange(ev); };
-        window[onErrorFn] = function(ev) { self._onError(ev); };
-        window[qualityChangeFn] = function(ev) { self._onPlaybackQualityChange(ev); };
+        window[stageChangeFn] = function(ev) {
+            self._onStateChange(ev);
+        };
+        window[onErrorFn] = function(ev) {
+            self._onError(ev);
+        };
+        window[qualityChangeFn] = function(ev) {
+            self._onPlaybackQualityChange(ev);
+        };
     }
 
     function _addEventListeners() {
@@ -218,18 +231,26 @@
         if (this._player && typeof this._player.addEventListener == 'function') {
             if (WiziCore_Helper.checkForIE7()) {
                 var htmlIdWithoutMinus = this.htmlId().replace(new RegExp("(-)", 'g'), ""),
-                    stageChangeFn = 'ac_yt_onStateChange_' + htmlIdWithoutMinus,
-                    onErrorFn = 'ac_yt_onError_' + htmlIdWithoutMinus,
-                    qualityChangeFn = 'ac_yt_onPlaybackQualityChange_' + htmlIdWithoutMinus;
+                stageChangeFn = 'ac_yt_onStateChange_' + htmlIdWithoutMinus,
+                onErrorFn = 'ac_yt_onError_' + htmlIdWithoutMinus,
+                qualityChangeFn = 'ac_yt_onPlaybackQualityChange_' + htmlIdWithoutMinus;
 
                 this._player.addEventListener('onStateChange', stageChangeFn);
                 this._player.addEventListener('onError', onErrorFn );
                 this._player.addEventListener('onPlaybackQualityChange', qualityChangeFn );
             } else {
-                this._player.addEventListener('onStateChange', function(ev) { self._onStateChange(ev) } );
-                this._player.addEventListener('onReady', function() { self._onPlayerReady(); } );
-                this._player.addEventListener('onError', function(ev) { self._onError(ev); } );
-                this._player.addEventListener('onPlaybackQualityChange', function(ev) { self._onPlaybackQualityChange(ev); } );
+                this._player.addEventListener('onStateChange', function(ev) {
+                    self._onStateChange(ev)
+                } );
+                this._player.addEventListener('onReady', function() {
+                    self._onPlayerReady();
+                } );
+                this._player.addEventListener('onError', function(ev) {
+                    self._onError(ev);
+                } );
+                this._player.addEventListener('onPlaybackQualityChange', function(ev) {
+                    self._onPlaybackQualityChange(ev);
+                } );
             }
         }
     }
@@ -256,9 +277,8 @@
         $(this).trigger(new jQuery.Event(widget.onPlaybackQualityChange), [res]);
     };
 
-    p.destroy = function() {
+    p.onDestroy = function() {
         clearPlayer.call(this);
-        widget._sc.destroy.apply(this, arguments);
     };
 
     function clearPlayer() {
@@ -320,7 +340,9 @@
         if (val != undefined && !isNaN(val)) {
             val = Math.max(0, Math.min(1, val));
             this._project['volume'] = val;
-            var obj = {"volume": this._project['volume']};
+            var obj = {
+                "volume": this._project['volume']
+                };
             this.sendExecutor(obj);
 
             if (this._player && this._isPlayerReady) {
@@ -380,7 +402,7 @@
         return true;
     };
 
-//    p.border = AC.Property.theme('border', p._border);
+    //    p.border = AC.Property.theme('border', p._border);
     p.bg = AC.Property.theme('bgColor', p._bg);
     p.opacity = AC.Property.theme('opacity', p._opacity);
 
@@ -409,8 +431,8 @@
     };
 
     window['onYouTubePlayerReady'] = function(id) {
-//        console.log('onYouTubePlayerReady');
-//        console.log('id: ' + id);
+    //        console.log('onYouTubePlayerReady');
+    //        console.log('id: ' + id);
     };
 
     AC.Widgets.Youtube.onApiLoaded = "E#Youtube#onApiLoaded";
@@ -422,73 +444,168 @@
 
 
     var actions = {
-        onPlayerReady: {alias: "widget_youtube_on_player_ready", funcview: "onPlayerReady", action: "AC.Widgets.Youtube.onPlayerReady", params: "", group: "widget_event_general"},
-        onStateChange: {alias: "widget_youtube_on_state_change", funcview: "onStateChange", action: "AC.Widgets.Youtube.onStateChange", params: "state", group: "widget_event_general"},
-        onError: {alias: "widget_youtube_on_error", funcview: "onError", action: "AC.Widgets.Youtube.onError", params: "ev", group: "widget_event_general"},
-        onPlaybackQualityChange: {alias: "widget_youtube_on_quality_change", funcview: "onPlaybackQualityChange", action: "AC.Widgets.Youtube.onPlaybackQualityChange", params: "quality", group: "widget_event_general"}
+        onPlayerReady: {
+            alias: "widget_youtube_on_player_ready", 
+            funcview: "onPlayerReady", 
+            action: "AC.Widgets.Youtube.onPlayerReady", 
+            params: "", 
+            group: "widget_event_general"
+        },
+        onStateChange: {
+            alias: "widget_youtube_on_state_change", 
+            funcview: "onStateChange", 
+            action: "AC.Widgets.Youtube.onStateChange", 
+            params: "state", 
+            group: "widget_event_general"
+        },
+        onError: {
+            alias: "widget_youtube_on_error", 
+            funcview: "onError", 
+            action: "AC.Widgets.Youtube.onError", 
+            params: "ev", 
+            group: "widget_event_general"
+        },
+        onPlaybackQualityChange: {
+            alias: "widget_youtube_on_quality_change", 
+            funcview: "onPlaybackQualityChange", 
+            action: "AC.Widgets.Youtube.onPlaybackQualityChange", 
+            params: "quality", 
+            group: "widget_event_general"
+        }
     };
     actions = jQuery.extend({}, AC.Widgets.Base.actions(), actions);
+    delete actions.click;
+    delete actions.dbclick;
+    delete actions.mousedown;
+    delete actions.mouseup;
 
     /**
      * Property definitions and then their default values
      */
     var props = [
-        { name: AC.Property.group_names.general, props:[
-            AC.Property.general.widgetClass,  // required
-            AC.Property.general.name,         // required
-            {name: "videoId", type : "text", set: "videoId", get: "videoId", alias: "widget_youtube_videoid"},
-            AC.Property.media.autoplay,
-            AC.Property.media.controls,
-            AC.Property.media.volume,
-            {name: "autohide", type : "youtubeAutohide", set: "autohide", get: "autohide", alias: "widget_youtube_autohide"}
-        ]},
-        { name: AC.Property.group_names.layout, props:[
-            AC.Property.layout.x,
-            AC.Property.layout.y,
-            AC.Property.layout.pWidthHidden,
-            AC.Property.layout.widthHidden,
-            AC.Property.layout.heightHidden,
-            AC.Property.layout.sizes,
-            AC.Property.layout.minWidth,
-            AC.Property.layout.maxWidth,
-            AC.Property.layout.repeat,
-            AC.Property.layout.zindex,
-            AC.Property.layout.anchors,
-            AC.Property.layout.alignInContainer
-        ]},
-        { name: AC.Property.group_names.behavior, props:[
-            AC.Property.behavior.dragAndDrop,
-            AC.Property.behavior.resizing,
-            AC.Property.behavior.visible,
-            AC.Property.behavior.enable
-        ]},
-        { name: AC.Property.group_names.data, props:[
-            AC.Property.data.view,
-            AC.Property.data.fields,
-            AC.Property.data.groupby,
-            AC.Property.data.orderby,
-            AC.Property.data.filter,
-            AC.Property.data.onview,
-            AC.Property.data.applyview,
-            AC.Property.data.listenview,
-            AC.Property.data.resetfilter,
-            AC.Property.data.autoLoad
-        ]},
-        { name: AC.Property.group_names.style, props:[
-            {name: "playerTheme", type : "youtubeTheme", set: "playerTheme", get: "playerTheme", alias: "widget_youtube_player_theme"},
-            AC.Property.behavior.opacity,
-            AC.Property.style.margin,
-            AC.Property.style.bgColor
-        ]}
-
-    ],
-        defaultProps = {width: "320", height: "240", x : "100", y: "100", zindex : "auto", margin: "", alignInContainer: 'left', pWidth: "",
-            anchors : {left: true, top: true, bottom: false, right: false}, visible : true,
-            opacity : 1, bgColor: "#cccccc", name: "youtube", data:[], enable: true, resizing: false,
-            videoId: '', volume: 0.8, autohide: 2, autoplay: false, controls: true, playerTheme: 'dark'
+    {
+        name: AC.Property.group_names.general, 
+        props:[
+        AC.Property.general.widgetClass,  // required
+        AC.Property.general.name,         // required
+        {
+            name: "videoId", 
+            type : "text", 
+            set: "videoId", 
+            get: "videoId", 
+            alias: "widget_youtube_videoid"
+        },
+        AC.Property.media.autoplay,
+        AC.Property.media.controls,
+        AC.Property.media.volume,
+        {
+            name: "autohide", 
+            type : "youtubeAutohide", 
+            set: "autohide", 
+            get: "autohide", 
+            alias: "widget_youtube_autohide"
+        }
+        ]
         },
 
-        lng = { "en" : {
+        {
+        name: AC.Property.group_names.layout, 
+        props:[
+        AC.Property.layout.x,
+        AC.Property.layout.y,
+        AC.Property.layout.pWidthHidden,
+        AC.Property.layout.widthHidden,
+        AC.Property.layout.heightHidden,
+        AC.Property.layout.sizes,
+        AC.Property.layout.minWidth,
+        AC.Property.layout.maxWidth,
+        AC.Property.layout.repeat,
+        AC.Property.layout.zindex,
+        AC.Property.layout.anchors,
+        AC.Property.layout.alignInContainer
+        ]
+        },
+
+        {
+        name: AC.Property.group_names.behavior, 
+        props:[
+        AC.Property.behavior.dragAndDrop,
+        AC.Property.behavior.resizing,
+            AC.Property.behavior.visible
+//            AC.Property.behavior.enable
+        ]
+        },
+
+        {
+        name: AC.Property.group_names.data, 
+        props:[
+        AC.Property.data.view,
+        AC.Property.data.fields,
+        AC.Property.data.groupby,
+        AC.Property.data.orderby,
+        AC.Property.data.filter,
+        AC.Property.data.onview,
+        AC.Property.data.applyview,
+        AC.Property.data.listenview,
+        AC.Property.data.resetfilter,
+        AC.Property.data.autoLoad
+        ]
+        },
+
+        {
+        name: AC.Property.group_names.style, 
+        props:[
+
+        {
+            name: "playerTheme", 
+            type : "youtubeTheme", 
+            set: "playerTheme", 
+            get: "playerTheme", 
+            alias: "widget_youtube_player_theme"
+        },
+        AC.Property.behavior.opacity,
+        AC.Property.style.margin,
+        AC.Property.style.bgColor,
+        AC.Property.style.customCssClasses,
+        AC.Property.style.widgetStyle
+        ]
+        }
+
+    ],
+    defaultProps = {
+        width: "320", 
+        height: "240", 
+        x : "100", 
+        y: "100", 
+        zindex : "auto", 
+        margin: "", 
+        alignInContainer: 'left', 
+        pWidth: "",
+        anchors : {
+            left: true, 
+            top: true, 
+            bottom: false, 
+            right: false
+        }, 
+        visible : true,
+        opacity : 1, 
+        bgColor: "#cccccc", 
+        name: "youtube", 
+        data:[], 
+        enable: true, 
+        resizing: false,
+        videoId: '', 
+        volume: 0.8, 
+        autohide: 2, 
+        autoplay: false, 
+        controls: true, 
+        playerTheme: 'dark', 
+        widgetStyle: "default", 
+        customCssClasses: ""
+    },
+
+    lng = {
+        "en" : {
             widget_name_youtube: "Youtube",
             widget_youtube_videoid: "Video ID",
             widget_youtube_autohide: "Autohide",
@@ -502,59 +619,60 @@
             widget_youtube_player_theme: "Player Theme",
             prop_youtube_player_theme_dark: "Dark",
             prop_youtube_player_theme_light: "Light"
-        } },
-        emptyProps = {};
+        }
+    },
+emptyProps = {};
 
 
-    // The following lines are required
+// The following lines are required
 
-    /**
+/**
      * Return available widget prop
      * @return {Object} available property
      */
-    widget.props = function() {
-        return props;
-    };
+widget.props = function() {
+    return props;
+};
 
-    /**
+/**
      * Return empty widget prop
      * @return {Object} default properties
      */
-    widget.emptyProps = function() {
-        return emptyProps;
-    };
+widget.emptyProps = function() {
+    return emptyProps;
+};
 
-    /**
+/**
      * Return widget inline edit prop name
      * @return {String} default properties
      */
-    widget.inlineEditPropName = function() {
-        return "data";
-    };
+widget.inlineEditPropName = function() {
+    return "data";
+};
 
-    widget.defaultProps = function() {
-        return defaultProps;
-    };
+widget.defaultProps = function() {
+    return defaultProps;
+};
 
-    /**
+/**
      * Return available widget actions
      * @return {Object} available actions
      */
-    widget.actions = function() {
-        return actions;
-    };
+widget.actions = function() {
+    return actions;
+};
 
 
-    /* Lang constants */
-    /**
+/* Lang constants */
+/**
      * Return available widget langs
      * @return {Object} available actions
      */
-    widget.langs = function() {
-        return lng;
-    };
+widget.langs = function() {
+    return lng;
+};
 
-    AC.Core.lang().registerWidgetLang(lng);
+AC.Core.lang().registerWidgetLang(lng);
 
-})(jQuery,window,document);
+    })(jQuery,window,document);
 

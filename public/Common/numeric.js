@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_NumericWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_NumericWidget = AC.Widgets.WiziCore_UI_NumericWidget =  AC.Widgets.WiziCore_UI_TextWidget.extend({
     _widgetClass : "WiziCore_UI_NumericWidget",
     _oldText : null,

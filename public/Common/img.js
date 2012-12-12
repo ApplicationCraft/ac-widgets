@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ImgWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple, WiziCore_Methods_Widget_ActionClick, {
     _widgetClass : "WiziCore_UI_ImgWidget",
     _image: null,
@@ -28,37 +28,41 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
         this._super.apply(this, arguments);
         if (this._project['useMap'] == "true"){
             this._project['useMap'] = true;
+        } else if (this._project['useMap'] == "false"){
+            this._project['useMap'] = false;
         }
     },
 
     draw : function() {
-        var self = this;
+        var self = this,
+            base = this.base();
 
         //init id
         var tuid = "img_" + this.htmlId();
 
         var mapName = tuid + "_map";
         this._mapArea = $("<map name=" + mapName + "><area shape='poly' coords='0,0,0,0'></map>"); //<area> tag must be inside, fix for IE
-        this.base().prepend();
+        base.prepend();
         this._image = $("<img style=' border:0;' usemap='#" + mapName + "'>");
         this._image.attr("id", tuid + "_image");
 
-        this._link = $("<a style='display: block'></a>");
+        this._link = $("<a style='display: block;text-decoration: none;'></a>");
         this._divForNonIEBrowsers = $("<div style='vertical-align:middle; display:table-cell;'></div>");
         if (!$.browser.msie) {
             this._divForNonIEBrowsers.append(this._image, this._mapArea);
             this._link.append(this._divForNonIEBrowsers);
-            this.base().prepend(this._link);
+            base.prepend(this._link);
         }
         else {
             this._link.append(this._image, this._mapArea);
-            this.base().prepend(this._link);
-            //this.base().css('vertical-align', 'middle');
+            base.prepend(this._link);
+            //base.css('vertical-align', 'middle');
         }
 
         this.bindAreas();
 
-        this.base().css({'text-align' : 'center'}); // put on the middle
+        base.css({'text-align' : 'center'}); // put on the middle
+        //base.addClass("ac-widget-overflow-border-radius");
         this._loading = false;
 
         //set initial value
@@ -85,6 +89,7 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
         this.mandatory = this.normalProperty('mandatory');
 
         this.border = this.themeProperty('border', this._border);
+        this.borderRadius = this.themeProperty('borderRadius', this._borderRadius);
         this.img = this.htmlLngPropertyBeforeSet('img', this._beforeImg, this._img);
         this.image = this.img;
         this.aspectRatio = this.htmlProperty('aspectRatio', this._updateImgSize);
@@ -132,7 +137,7 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
         this._super();
         this.initDomStatePos();
 
-        //this._updateEnable();
+        this._updateEnable();
         this._visible(this.visible());
         this._opacity(this.opacity());
         this._shadow(this.shadow());
@@ -140,6 +145,7 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
 //        this._aspectRatio(this.aspectRatio(), true);// 'aspect' must be early than 'img' property
         this._updateLayout();
         this._img(this._project['img'], true);
+        this._borderRadius(this.borderRadius());
         this._border(this.border());
         this._updateLink(this.link());
 //        this._updateLayout();
@@ -161,6 +167,7 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
         if (this.aspectRatio() == "aspect" && this.aspectResize() && this.mode() != WiziCore_Visualizer.EDITOR_MODE){
             this.relativeResize();
         }
+        this._setPosEnableDiv();
     },
 
     _updateContainerDivSize: function() {
@@ -216,7 +223,7 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
         this._link.css({'width': width, 'height': height, display:'block'});
         this._divForNonIEBrowsers.css({'width': width, 'height': height, display:'table-cell'});
         if (aspectRation == 'aspect') {
-            image.css({'max-height': height + 'px', 'max-width': width + 'px', 'height': "", 'width': ""});
+            image.css({'max-height': height + 'px', 'max-width': width + 'px', 'height': "", 'width': "", 'vertical-align': ''});
             tBase.css({'width': width, 'height': height});
 
             if (pWidth > 0) {
@@ -245,6 +252,7 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
                     image.css({'height': '100%', 'width': '100%', 'max-height': "", 'max-width': ""});
                 }
             }
+            image.css({'vertical-align': ''});
             if (pWidth > 0) {
                 tBase.css({'width': pWidth + '%', 'height': height, 'table-layout':''});
                 this._divForNonIEBrowsers.css({'width': '100%', display:''});
@@ -255,7 +263,7 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
                 this._link.css({'width': width, 'height': height, 'table-layout':''});
             }
         } else if (aspectRation == 'origin') {
-            image.css({'height': '', 'width': '', 'max-height': '', 'max-width': ''});
+            image.css({'height': '', 'width': '', 'max-height': '', 'max-width': '', 'vertical-align': 'top'}); //Bug #5358
             tBase.css({'min-width': width, 'min-height': height, width: '', height: '', 'table-layout':''});
             this._link.css({'min-width': width, 'min-height': height, width: '', height: '', 'table-layout':''});
         }
@@ -285,6 +293,12 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
             if (this.eventsHandles()[WiziCore_UI_ImgWidget.onAreaClick] > 0) {
                 delete this.eventsHandles()[WiziCore_UI_ImgWidget.onAreaClick];
             }
+            if (this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseEnter] > 0) {
+                delete this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseEnter];
+            }
+            if (this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseLeave] > 0) {
+                delete this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseLeave];
+            }
             this._mapArea.empty();
             this._image.maphilight('destroy');
         } else {
@@ -292,10 +306,16 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
         }
     },
 
+    _borderRadius: function(val, div) {
+        this._super.apply(this, arguments);
+        this._setElementBorderRadius(val, this._image);
+    },
+
     _enable: function(flag) {
-        if (this.useMap()) {
-            this.fillMap();
-        }
+//        if (this.useMap()) {
+//            this.fillMap();
+//        }
+        this.showEnableDiv(flag);
     },
 
 //    getNewWidgetSize: function() {
@@ -308,10 +328,13 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
      * On click event
      */
     onClick: function(ev) {
-        var triggerEvent = new jQuery.Event(AC.Widgets.Base.onClick);
+        var triggerEvent = new jQuery.Event(AC.Widgets.Base.onClick),
+            pageJump = this.pageJump(),
+            app = this.form();
         acDebugger.systemLog("triggerEvent", triggerEvent, "self.id()", this.id());
+
         $(this).trigger(triggerEvent, [ev]);
-        (!triggerEvent.isPropagationStopped()) && this.onActionClick(ev, this.pageJump());
+        (!triggerEvent.isPropagationStopped()) && this.onActionClick(ev, pageJump, app);
         ev.stopPropagation();
     },
 
@@ -359,6 +382,12 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
         if (this.eventsHandles()[WiziCore_UI_ImgWidget.onAreaClick] == undefined) {
             this.eventsHandles()[WiziCore_UI_ImgWidget.onAreaClick] = WiziCore_UI_ImgWidget.onAreaClick;
         }
+        if (this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseEnter] == undefined) {
+            this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseEnter] = WiziCore_UI_ImgWidget.OnAreaMouseEnter;
+        }
+        if (this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseLeave] == undefined) {
+            this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseLeave] = WiziCore_UI_ImgWidget.OnAreaMouseLeave;
+        }
 
         var mapHighLightColor = this.mapHighLightColor();
         var mapHighLightOpacity = this.mapHighLightOpacity();
@@ -384,18 +413,34 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
     },
 
     bindAreas: function() {
-        var canBind = (this.mode() != WiziCore_Visualizer.EDITOR_MODE && this.eventsHandles()[WiziCore_UI_ImgWidget.onAreaClick] !== undefined);
+        var canBind = (this.mode() != WiziCore_Visualizer.EDITOR_MODE);
         if (canBind) {
             var self = this;
-            this._mapArea.unbind("vclick.custom").bind("vclick.custom", function(ev) {
-                if (ev.target && (ev.target.tagName).toLowerCase() == "area"){
-                    self.onAreaClick(ev);
-                }
-            });
+            if (this.eventsHandles()[WiziCore_UI_ImgWidget.onAreaClick] !== undefined){
+                this._mapArea.unbind("vclick.custom").bind("vclick.custom", function(ev) {
+                    if (ev.target && (ev.target.tagName).toLowerCase() == "area"){
+                        self.onAreaClick(ev);
+                    }
+                });
+            }
+            if (this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseEnter] !== undefined){
+                this._mapArea.unbind("mouseenter.custom").bind("mouseenter.custom", function(ev){
+                    if (ev.target && (ev.target.tagName).toLowerCase() == "area"){
+                        self.onMouseOverArea(ev);
+                    }
+                });
+            }
+            if (this.eventsHandles()[WiziCore_UI_ImgWidget.OnAreaMouseLeave] !== undefined){
+                this._mapArea.unbind("mouseleave.custom").bind("mouseleave.custom", function(ev){
+                    if (ev.target && (ev.target.tagName).toLowerCase() == "area"){
+                        self.onMouseLeaveArea(ev);
+                    }
+                });
+            }
         }
     },
 
-    onAreaClick: function(ev) {
+    getDataFromAreaEvent: function(ev, isClick){
         var self = this;
         var area = $(ev.target);
         var ids = $(area).attr("data-index");
@@ -404,30 +449,37 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
         if (mapData != null) {
             var mapArea = self._mapArea;
             if (self.mapMultiSelect()) {
-                value = [];
-                ids = [];
-                self._selectedAreasIndexes = [];
-                //change highLight state
-                var data = area.data('maphilight') || {};
-                data.alwaysOn = !data.alwaysOn;
-                area.data('maphilight', data);
-                mapArea.find("area").each(function(ind, el) {
-                    var el = $(el);
-                    var data = el.data('maphilight');
-                    var elValue = el.attr("value");
-                    var areaId = el.attr("data-index");
-                    if (data != undefined && data.alwaysOn) {
-                        ids.push(areaId);
-                        self._selectedAreasIndexes.push(elValue);
-                    }
-                });
+                if (isClick){
+                    value = [];
+                    ids = [];
+                    self._selectedAreasIndexes = [];
+                    //change highLight state
+                    var data = area.data('maphilight') || {};
+
+                    data.alwaysOn = !data.alwaysOn;
+                    area.data('maphilight', data);
+                    mapArea.find("area").each(function(ind, el) {
+                        var el = $(el);
+                        var data = el.data('maphilight');
+                        var elValue = el.attr("value");
+                        var areaId = el.attr("data-index");
+                        if (data != undefined && data.alwaysOn) {
+                            ids.push(areaId);
+                            self._selectedAreasIndexes.push(elValue);
+                        }
+                    });
+                }
 
                 //getting value
                 for (var i in mapData.rows) {
                     var item = mapData.rows[i];
                     for (var j in ids) {
                         if (item.id == ids[j]) {
-                            value.push(item.data[2]);
+                            if (isClick){
+                                value.push(item.data[2]);
+                            } else {
+                                value = item.data[2];
+                            }
                         }
                     }
                 }
@@ -440,11 +492,13 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
                     var data = el.data('maphilight') || {};
                     var areaId = el.attr("data-index");
                     var elValue = el.attr("value");
-                    data.alwaysOn = (selAreaId == areaId);
-                    $(el).data('maphilight', data);
-                    if (data.alwaysOn) {
-                        ids = areaId;
-                        self._selectedAreasIndexes = [elValue];
+                    if (isClick){
+                        data.alwaysOn = (selAreaId == areaId);
+                        $(el).data('maphilight', data);
+                        if (data.alwaysOn) {
+                            ids = areaId;
+                            self._selectedAreasIndexes = [elValue];
+                        }
                     }
                 });
 
@@ -457,15 +511,44 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
                     }
                 }
             }
-            //update state of areas (highlight or not)
-            mapArea.trigger('alwaysOn.maphilight');
+        }
+        return {mapData: mapData, ids: ids, value: value};
+    },
+
+    onAreaClick: function(ev) {
+        var self = this;
+        var data = self.getDataFromAreaEvent(ev, true);
+
+        //update state of areas (highlight or not)
+        if (data.mapData != null){
+            self._mapArea.trigger('alwaysOn.maphilight');
         }
 
         var triggerEvent = new jQuery.Event(WiziCore_UI_ImgWidget.onAreaClick);
         acDebugger.systemLog("triggerEvent", triggerEvent, "self.id()", self.id());
-        $(self).trigger(triggerEvent, [ev, ids, value]);
+        $(self).trigger(triggerEvent, [ev, data.ids, data.value]);
         self.sendDrillDown();
     },
+
+    onMouseOverArea: function(ev){
+        var self = this;
+        var data = self.getDataFromAreaEvent(ev);
+
+        var triggerEvent = new jQuery.Event(WiziCore_UI_ImgWidget.OnAreaMouseEnter);
+        acDebugger.systemLog("triggerEvent", triggerEvent, "self.id()", self.id());
+        $(this).trigger(triggerEvent, [ev, data.ids, data.value]);
+    },
+
+    onMouseLeaveArea: function(ev){
+        var self = this;
+        var data = self.getDataFromAreaEvent(ev);
+
+        var triggerEvent = new jQuery.Event(WiziCore_UI_ImgWidget.OnAreaMouseLeave);
+        acDebugger.systemLog("triggerEvent", triggerEvent, "self.id()", self.id());
+        $(this).trigger(triggerEvent, [ev, data.ids, data.value]);
+    },
+
+
 
     resetValue: function() {
         this._selectedAreasIndexes = [];
@@ -529,6 +612,9 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
     },
 
     _img: function(path, fromInitDomState) {
+        if (!this._image)
+            return;
+
         var trVal = WiziCore_Helper.isLngToken(path) ? this._getTranslatedValue(path) : path;
         var el = this._image;
         var self = this;
@@ -737,6 +823,8 @@ var WiziCore_UI_ImgWidget = AC.Widgets.WiziCore_UI_ImgWidget =  AC.Widgets.Base.
 }));
 
 WiziCore_UI_ImgWidget.onAreaClick = "E#Img#onAreaClick";
+WiziCore_UI_ImgWidget.OnAreaMouseEnter = "E#Img#OnAreaMouseEnter";
+WiziCore_UI_ImgWidget.OnAreaMouseLeave = "E#Img#OnAreaMouseLeave";
 
 /**
  * Return available widget actions
@@ -745,6 +833,8 @@ WiziCore_UI_ImgWidget.onAreaClick = "E#Img#onAreaClick";
 WiziCore_UI_ImgWidget.actions = function() {
     var ret = {
         onAreaClick : {alias : "widget_event_onareaclick", funcview : "onAreaClick", action : "AC.Widgets.WiziCore_UI_ImgWidget.onAreaClick", params : "ev, id, value", group : "widget_event_mouse"},
+        OnAreaMouseEnter : {alias : "widget_event_onareaover", funcview : "OnAreaMouseEnter", action : "AC.Widgets.WiziCore_UI_ImgWidget.OnAreaMouseEnter", params : "ev, id, value", group : "widget_event_mouse"},
+        OnAreaMouseLeave : {alias : "widget_event_onarealeave", funcview : "OnAreaMouseLeave", action : "AC.Widgets.WiziCore_UI_ImgWidget.OnAreaMouseLeave", params : "ev, id, value", group : "widget_event_mouse"},
         dataLoaded : {alias : "widget_event_ondataloaded", funcview : "onDataLoaded", action : "AC.Widgets.Base.onDataLoaded", params : "error, data", group : "widget_event_data", sweight : 5},
         dataReset : {alias : "widget_event_ondatareset", funcview : "onDataReset", action : "AC.Widgets.Base.onDataReset", params : "", group : "widget_event_data"}
     };
@@ -825,6 +915,7 @@ var _props = [
     { name: AC.Property.group_names.style, props:[
         AC.Property.behavior.opacity,
         AC.Property.style.border,
+        AC.Property.style.borderRadius,
         AC.Property.style.margin,
         AC.Property.general.displayHourglassOver,
         AC.Property.general.hourglassImage,

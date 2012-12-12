@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     var triggerObject  = {},
         currentLanguage = null,
         isLoading = false,
@@ -23,21 +23,21 @@
     }
     widget.onGmapApiLoaded = onGmapApiLoaded;
 
-    function loadGmap(key, form, language) {
+    function loadGmap(key, form, language, libraries) {
         if (WiziCore_Helper.googleMapsApiVersion == 2) {
             if (!_hasAnotherGmapWidget(form))
-                loadGmapScript(key, language);
+                loadGmapScript(key, language, libraries);
             else {
                 var dlg = WiziCore_Helper.showWarning('', AC.Core.lang().trText("widget_google_maps_conflict_api_message"), false, WiziCore_UI_MessageBoxWidget.MB_YESNO);
                 $(dlg).one(WiziCore_UI_MessageBoxWidget.onDialogClose, function(ev, id, res) {
                     if (id == WiziCore_UI_MessageBoxWidget.IDYES){
-                        loadGmapScript(key, language);
+                        loadGmapScript(key, language, libraries);
                     }
                 });
             }
         }
         else
-            loadGmapLib && loadGmapLib.call(this, key, language);
+            loadGmapLib && loadGmapLib.call(this, key, language, libraries);
     }
 
     function _hasAnotherGmapWidget(form) {
@@ -53,17 +53,23 @@
         return res;
     }
 
-    function loadGmapLib(apiKey, language) {
+    function loadGmapLib(apiKey, language, libraries) {
         if (currentLanguage != language || typeof google == "undefined" || typeof google.maps == "undefined" || typeof google.maps.Map != "function") {
-            loadGmapScript(apiKey, language);
+            loadGmapScript(apiKey, language, libraries);
         }
     }
 
-    function loadGmapScript(apiKey, lang) {
+    function loadGmapScript(apiKey, lang, libraries) {
         if (!isLoading) {
             currentLanguage = lang;
             isLoading = true;
-            var path = "http://maps.googleapis.com/maps/api/js?libraries=adsense&v=3.6&sensor=true&callback=AC.Widgets.GoogleMapsAdvanced.onGmapApiLoaded";
+
+            var additionalLibs = '';
+            if (libraries && $.isArray(libraries) && libraries.length != 0) {
+                additionalLibs = ',' + libraries.join(',');
+            }
+
+            var path = (document.location.protocol == "https:" ? "https:" : "http:") + "//maps.googleapis.com/maps/api/js?libraries=adsense" + additionalLibs + "&v=3.6&sensor=true&callback=AC.Widgets.GoogleMapsAdvanced.onGmapApiLoaded";
             if (lang != undefined)
                 path += "&language=" + lang;
 
@@ -145,7 +151,15 @@
         this.base().prepend(div);
         this._gMapDiv = div;
 
-        $(this.page()).bind(AC.Widgets.WiziCore_Api_Page.onPageShow, function() {
+        this._gMapDiv.bind('resize.' + this.id(), _resizeHandler);
+
+        function _resizeHandler() {
+            if (self._gMap && self.parent().getLayoutType() != 'absolute') {
+                self._setPosEnableDiv();
+            }
+        }
+
+        $(this.repeatCompatiblePage()).bind(AC.Widgets.WiziCore_Api_Page.onPageShow + "." + this.id(), function() {        
             if (self._updateLatLng) {
                 setTimeout(function() {
                     self._latlong(self.latlong());
@@ -177,9 +191,9 @@
     };
 
     function _initServices() {
-        this._geocoder = new google.maps.Geocoder();
-        this._directionsService = new google.maps.DirectionsService();
-        this._directionsDisplay = new google.maps.DirectionsRenderer();
+        this._geocoder = !this._geocoder ? new google.maps.Geocoder() : this._geocoder;
+        this._directionsService = !this._directionsService ? new google.maps.DirectionsService() : this._directionsService;
+        this._directionsDisplay = !this._directionsDisplay ? new google.maps.DirectionsRenderer() : this._directionsDisplay;
     }
 
     p.onPageDrawn = function() {
@@ -195,6 +209,7 @@
 
     p._updateLayout = function(){
         widget._sc._updateLayout.apply(this, arguments);
+
         this._gMapDiv.height(this.height() + 'px');
         if (this._gMap != null) {
             this._resizeGmap();
@@ -235,7 +250,7 @@
 
     p.initGMaps = function(apiKey) {
         this.clearMap();
-        loadGmap.call(this, apiKey, this.form(), this.form().language());
+        loadGmap.call(this, apiKey, this.form(), this.form().language(), this.libraries());
     };
 
     p.apiInited = function() {
@@ -246,7 +261,7 @@
 
     p.clearMap = function() {
         if (this._gMap != null && typeof google != "undefined" && typeof google.maps != "undefined" && (typeof google.maps.Map == "function" && typeof google.maps.event == "object")) {
-                google.maps.event.clearInstanceListeners(this._gMap);
+            google.maps.event.clearInstanceListeners(this._gMap);
         }
         delete this._gMap;
         this._gMap = null;
@@ -426,7 +441,12 @@
         }
     };
 
-    p.remove = function() {
+    p.onRemove = function() {
+        $(this.repeatCompatiblePage()).unbind(AC.Widgets.WiziCore_Api_Page.onPageShow + "." + this.id());
+
+        if (this._gMapDiv)
+            this._gMapDiv.unbind('resize.' + this.id());
+
         if (this._adUnitDiv) {
             this._adUnitDiv.remove();
             this._adUnitDiv = null;
@@ -453,11 +473,11 @@
         this._infoWindows = null;
 
         $(triggerObject).unbind(AC.Widgets.GoogleMapsAdvanced.onApiLoaded);
-        widget._sc.remove.call(this);
     };
 
     p._enable = function(flag){
         if (this._gMap != null){
+            this._gMapDiv.removeClass('ui-state-disabled');
             this.showEnableDiv(flag);
         } else if (this._gMapDiv != null) {
             (flag === false) ? this._gMapDiv.addClass('ui-state-disabled') : this._gMapDiv.removeClass('ui-state-disabled');
@@ -555,7 +575,7 @@
 
         if (!isLoading) {
             this.addOneApiInitedEvent();
-            loadGmapScript(_getApiKey.call(this, this.googleKey()), lng);
+            loadGmapScript(_getApiKey.call(this, this.googleKey()), lng, this.libraries());
         } else
             lngToLoad = lng;
     };
@@ -566,9 +586,12 @@
 
         if (currentLanguage != language || typeof google == "undefined" || typeof google.maps == "undefined" || typeof google.maps.Map != "function") {
             this.addOneApiInitedEvent();
-            loadGmap(_getApiKey.call(this, this.googleKey()), this.form(), language);
-        } else
+            loadGmap(_getApiKey.call(this, this.googleKey()), this.form(), language, this.libraries());
+        } else {
+            _initServices.call(this);
+            this._loaded = true;
             $(this).trigger(widget.onInitialized);
+        }
     };
 
     p.googleMap = function(){
@@ -987,8 +1010,10 @@
     }
 
     p.getAddress = function(callback, lat, lng, region) {
-        if (!this._geocoder || !callback)
+        if (!this._geocoder || !callback) {
+            callback(false, {msg:AC.Core.lang().trText("widget_gmap_api_not_loaded")});
             return;
+        }
 
         if (!lat || !lng) {
             var self = this;
@@ -1016,8 +1041,10 @@
     };
 
     p.getCoord = function(callback, address, region) {
-        if (!this._geocoder || !callback || !address)
+        if (!this._geocoder || !callback || !address) {
+            callback(false, {msg:AC.Core.lang().trText("widget_gmap_api_not_loaded")});
             return;
+        }
 
         var request = {address: address};
         if (region)
@@ -1032,8 +1059,10 @@
     };
 
     p.getDirections = function(callback, origin, destination, drawOnMap, options, rendererOptions) {
-        if (!this._directionsService || !callback || !origin || !destination)
+        if (!this._directionsService || !callback || !origin || !destination){
+            callback(false, {msg:AC.Core.lang().trText("widget_gmap_api_not_loaded")});
             return;
+        }
 
         origin = ($.isArray(origin)) ? new google.maps.LatLng(origin[0], origin[1]) : origin;
         destination = ($.isArray(destination)) ? new google.maps.LatLng(destination[0], destination[1]) : destination;
@@ -1406,6 +1435,7 @@
     p.mapStyles = AC.Property.html("mapStyles", p._mapStyles);
     p.latlong = AC.Property.htmlPropBeforeSet("latlong", p._latlongBefore, p._latlong);
     p.mapControls = AC.Property.html("mapControls", p._mapControls);
+    p.libraries = AC.Property.normal("libraries");
     p.noScroll = AC.Property.html("noScroll", p._noScroll);
     p.data = AC.Property.html("data", p._data);
     p.value = p.latlong;
@@ -1470,7 +1500,8 @@
                 {name: "showMarker", type : "boolean", get: "showMarker", set: "showMarker", alias : "widget_gmap_showmarker"},
                 {name: "zoomLevel", type : "gmzoomlevel", get: "zoomLevel", set: "zoomLevel", alias : "widget_gmap_zoomlevel"},
                 {name: "noScroll", type : "boolean", get: "noScroll", set: "noScroll", alias : "widget_gmap_no_scroll"},
-                {name: "mapControls", type : "gmControls", get: "mapControls", set: "mapControls", alias : "widget_gmap_mapcontrols"}
+                {name: "mapControls", type : "gmControls", get: "mapControls", set: "mapControls", alias : "widget_gmap_mapcontrols"},
+                {name: "libraries", type : "gmLibraries", get: "libraries", set: "libraries", alias : "widget_gmap_libraries"}
             ]},
             { name: AC.Property.group_names.layout, props:[
                 AC.Property.layout.aspectResize,
@@ -1512,7 +1543,7 @@
                 AC.Property.style.margin,
                 AC.Property.style.bgColor,
                 AC.Property.style.customCssClasses,
-			AC.Property.style.widgetStyle
+			    AC.Property.style.widgetStyle
             ]},
             { name: "widget_gmap_markerStyle", props:[
                 {name: "defaultMarkerImage", type : "resource", get: "markerImage", set: "markerImage", alias : "widget_gmap_marker_image"}
@@ -1542,7 +1573,7 @@
                 margin: "", alignInContainer: 'left',
                 dragAndDrop: false, customCssClasses: "",
                 resizing: false,
-                aspectResize: false
+                aspectResize: false, libraries: []
             },
         lng = {"en" : {
             widget_name_gmapsadvanced: "Google Maps Advanced",
@@ -1585,6 +1616,7 @@
             widget_gmap_fill_color: "Fill Color",
             widget_gmap_fill_opacity: "Fill Opacity",
             widget_gmap_geocode_error: "Geocode was not successful for the following reason",
+            widget_gmap_api_not_loaded: "API not loaded yet",
             widget_gmap_direction_service_error: "Direction service was not successful for the following reason",
             widget_gmap_adsense: "AdSense",
             widget_gmap_adsense_publisher_id: "Publisher ID",
@@ -1597,7 +1629,8 @@
             widget_gmap_mouseOverHTML: "mouseOverHTML",
             widget_gmap_onClickHTML: "onClickHTML",
             widget_gmap_markerImageURL: "Marker Image URL",
-            widget_gmap_no_scroll: "No Scroll"
+            widget_gmap_no_scroll: "No Scroll",
+            widget_gmap_libraries: "Libraries"
         }};
 
     // method to get access to static values

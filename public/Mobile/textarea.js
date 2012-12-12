@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_TextAreaMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     function _getDrawnValue(projectValue) {
         if (!this._input)
             return projectValue;
@@ -41,8 +41,8 @@
         this._cnt.empty();
         this.initEditorLayer();
         var htmlId = this.htmlId();
-        var cnt = $('<div style="padding-right: 15px; box-sizing: border-box;"></div>');
-        var textarea = $('<textarea style="width: 100%; height:100%"/>');
+        var cnt = $('<div>');
+        var textarea = $('<textarea style="width: 100%; height:100%; box-sizing: border-box; -moz-box-sizing: border-box;"/>');
         textarea.attr("id", htmlId + "_text");
         AC.Widgets.Base.prototype._tabindex.call(this, this.tabindex(), textarea);
         textarea.attr("name", htmlId + "_text");
@@ -70,7 +70,7 @@
     _updateSize: function() {
         var inp = this._input;
         if (inp) {
-            inp.css('height', this.height() - 15);
+            inp.css('height', this.height());
 //            this.base().css('overflow', 'hidden');
         }
     },
@@ -79,10 +79,8 @@
         if (inp){
             if (this.getContainerLayoutType() == WiziCore_Widget_Layout.LAYOUT_TYPES.Absolute){
                 inp.width(this.width());
-                inp.parent().css("padding-right", "");
             } else {
                 inp.width("100%");
-                inp.parent().css("padding-right", "15px");
             }
         }
     },
@@ -94,6 +92,10 @@
     _updateLayout: function() {
         this._super.apply(this, arguments);
         this._updateSize();
+    },
+
+    _shadow: function(val){
+        this._super(val, this._input);
     },
 
     _font: function(val) {

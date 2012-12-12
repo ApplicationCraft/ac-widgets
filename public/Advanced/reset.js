@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ResetButtonWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ResetButtonWidget = AC.Widgets.WiziCore_UI_ResetButtonWidget =  AC.Widgets.WiziCore_UI_ButtonWidget.extend({
     _widgetClass : "WiziCore_UI_ResetButtonWidget",
     _pageNum: null,
@@ -34,9 +34,8 @@ var WiziCore_UI_ResetButtonWidget = AC.Widgets.WiziCore_UI_ResetButtonWidget =  
         this.viewId = this.normalProperty('viewId');
     },
 
-    destroy: function(){
+    onDestroy: function(){
         $(this._input).unbind("click.custom");
-        this._super();
     },
 
     /**

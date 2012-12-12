@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ActionButtonMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ActionButtonMobileWidget = AC.Widgets.WiziCore_UI_ActionButtonMobileWidget = AC.Widgets.WiziCore_UI_ButtonMobileWidget.extend($.extend({},WiziCore_Methods_Widget_ActionClick, {
     _widgetClass : "WiziCore_UI_ActionButtonMobileWidget",
     _theme: "c",
@@ -29,11 +29,21 @@ var WiziCore_UI_ActionButtonMobileWidget = AC.Widgets.WiziCore_UI_ActionButtonMo
     },
 
     onClick: function(ev) {
-        var triggerEvent = new $.Event(AC.Widgets.Base.onClick);
-        $(this).trigger(triggerEvent, [ev]);
-        if (!triggerEvent.isPropagationStopped())
-            this.onActionClick(ev, this.pageJump());
-        //ev.stopPropagation();
+        if (!this.enable() || !this._isParentEnable())
+            return;
+
+        this._updateButtonViewOnClick();
+        var self = this,
+            pageJump = this.pageJump(),
+            app = this.form();
+        ev.stopPropagation(); // stop propagation for ios mobile button
+        setTimeout(function(){
+            var triggerEvent = new $.Event(AC.Widgets.Base.onClick);
+            $(self).trigger(triggerEvent, [ev]);
+            if (!triggerEvent.isDefaultPrevented()) //checking for false
+                self.onActionClick(ev, pageJump, app);
+            //ev.stopPropagation();
+        },30);
     }
 }));
 

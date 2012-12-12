@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     var widget = AC.Widgets.MobileUploadButton = function() {
         this.init.apply(this, arguments);
     };
@@ -51,10 +51,10 @@
 
     p.onPageDrawn = function() {
         widget._sc.onPageDrawn.apply(this, arguments);
-        var base = this.base();
-        base.css({
-            'overflow': 'hidden'
-        });
+//        var base = this.base();
+//        base.css({
+//            'overflow': 'hidden'
+//        });
     };
 
     p._drawForDesktop = function(buttonContainer) {
@@ -85,9 +85,12 @@
         self._iframe = iframe;
         
         var base = self.base();
-        
+
+        var wrapDiv = $("<div style='position:absolute; top:0px; left: 0px; width:100%; height: 100%; overflow: hidden'></div>");
+        wrapDiv.append(form);
+
         form.append(fileInput);
-        base.append(buttonContainer, form, iframe);
+        base.append(buttonContainer, wrapDiv, iframe);
         
         base.resize(function() {
             self._fileInput.css({
@@ -164,6 +167,9 @@
     };
 
     p._redraw = function() {
+        if (!this._container)
+            return;
+
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
 
@@ -270,6 +276,29 @@
         self._container.append(nativeSelect);
         
         nativeSelect.selectmenu(self._getJQMOptions());
+        //update icon for select in native change classes
+        var p = nativeSelect.parent();
+        var iconSpan = p.find('span[class*="m-ui-icon"]');
+        var iconDiv = p.find('span[class*="m-ui-btn-inner"]');
+        if (this.icon() == "none"){
+            iconSpan.hide();
+            iconDiv.css({"padding-right": "20px"});
+        } else {
+            iconSpan.show();
+            iconDiv.css({"padding-right": ""});
+            var classes = iconSpan.attr("class").split(" ");
+            var newClasses = [];
+            for (var i = 0; i < classes.length; i++){
+                if (classes[i] != "m-ui-icon" && classes[i] != "m-ui-icon-shadow"){
+
+                } else {
+                    newClasses.push(classes[i]);
+                }
+            }
+            newClasses.push("m-ui-icon-" + this.icon());
+            iconSpan.attr("class", newClasses.join(" "));
+        }
+
         nativeSelect.bind("change", function() {
             switch (nativeSelect.val()) {
                 case "library":
@@ -317,7 +346,15 @@
 
         input.mobileButton(self._getJQMOptions());
     };
-    
+
+    p._shadow = function(val){
+        if (this._input){
+            widget._sc._shadow.call(this, val, this._input.parent());
+        } else if (this._nativeSelect) {
+            widget._sc._shadow.call(this, val, this._nativeSelect.parent());
+        }
+    };
+
     p._enable = function(val) {
         if (this._input) {
             val = (val === true) ? "enable" : "disable";
@@ -521,15 +558,15 @@
                     }
 
                     fileEntry.copyTo(acFilesDir, newFileName, function(copyFileEntry) {
-                        self.form().addLocalUploadFileInfo(copyFileEntry.fullPath, mimeType, name, function(error) {
+                        /*self.form().addLocalUploadFileInfo(copyFileEntry.fullPath, mimeType, name, function(error) {
                             if (error) {
                                 onUploadFailCallback();
-                            } else {
+                            } else {*/
                                 self._fileName = copyFileEntry.fullPath;
                                 $(self).trigger(new $.Event(widget.onUploaded), [false, self._fileName]);
                                 self._changeState(AC.WidgetExt.UPLOAD_STATE.SELECT);
-                            }
-                        });
+                            //}
+                        //});
                     }, onUploadFailCallback);
                 }, onUploadFailCallback);
             }, onUploadFailCallback);

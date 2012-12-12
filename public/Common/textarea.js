@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_TextAreaWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_TextAreaWidget = AC.Widgets.WiziCore_UI_TextAreaWidget =  AC.Widgets.Base.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple, AC.WidgetExt.Placeholder,{
     _widgetClass: "WiziCore_UI_TextAreaWidget",
     _input: null,
@@ -375,6 +375,14 @@ var WiziCore_UI_TextAreaWidget = AC.Widgets.WiziCore_UI_TextAreaWidget =  AC.Wid
             }
             return value;
         });
+    },
+
+    getNewWidgetSize: function() {
+        var el = this.base();
+        var isFirefox = WiziCore_Helper.isFirefox();
+        var w = el.width();
+        var h = isFirefox ? el.height() : el.height() - 3;
+        return {width: w, height: h};
     },
 
     getDataModel: function() {

@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 
     // This top section should always be present
     var widget = AC.Widgets.MediaElementVideo = function() {
@@ -92,12 +92,14 @@
             AC.Property.behavior.opacity,
             AC.Property.style.margin,
             AC.Property.style.border,
-            AC.Property.style.bgColor
+            AC.Property.style.bgColor,
+            AC.Property.style.customCssClasses,
+            AC.Property.style.widgetStyle
         ]}],
         defaultProps = {width: "240", height: "160", x : "100", y: "100", zindex : "auto", margin: "", alignInContainer: 'left', pWidth: "",
             anchors : {left: true, top: true, bottom: false, right: false}, visible : true,
             opacity : 0.8, bgColor: "#000000", name: "Video", data:[], enable: true, resizing: false, border:"1px solid gray",
-            autoplay: false, preload:false, volume: 0.8, controls: true, source: []
+            autoplay: false, preload:false, volume: 0.8, controls: true, source: [], widgetStyle: "default", customCssClasses: ""
         },
         lng = jQuery.extend(true, {'en': {widget_name_mediaelementvideo: "Video"}}, AC.Widgets.MediaElementBase.langs());
 

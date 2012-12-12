@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_TableLayoutWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  AC.Widgets.WiziCore_Widget_Container.extend($.extend({}, WiziCore_ContainerDataBind, WiziCore_WidgetAbstract_DataIntegrationContainer, {
     _widgetClass : "WiziCore_UI_TableLayoutWidget",
     _table: null,
@@ -225,14 +225,14 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
     },
 
     _addContainerToChildren: function(pos) {
-        var propsDefault = AC.Core.Widgets().getDefaultWidgetProperties("WiziCore_Widget_Container");
-        var child = this.addNewWidget({widgetClass: "WiziCore_Widget_Container", project: propsDefault, posInChildren: pos});
+        var propsDefault = AC.Core.Widgets().getDefaultWidgetProperties("ContainerForTable");
+        var child = this.addNewWidget({widgetClass: "ContainerForTable", project: propsDefault, posInChildren: pos});
         this._setContainerProps(child);
         this._setWidgetPosition(child);
         //to update tablecellstyle property
         child._pos = pos;
         var self = this;
-        $(child).bind(AC.Widgets.WiziCore_Widget_Container.onChangeProperty, function(ev, prop, val){
+        $(child).bind(AC.Widgets.ContainerForTable.onChangeProperty, function(ev, prop, val){
             self._onChildChangeProp(this._pos, prop, val);
             return false;
         });
@@ -255,7 +255,7 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
         for (var i = 0, l = this._cells.length; i < l; ++i) {
             child = this._children[i];
             if (child) {
-                $(child).bind(AC.Widgets.WiziCore_Widget_Container.onChangeProperty, function(ev, prop, val){
+                $(child).bind(AC.Widgets.ContainerForTable.onChangeProperty, function(ev, prop, val){
                     self._onChildChangeProp(this._pos, prop, val);
                     return false;
                 });
@@ -339,7 +339,7 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
 //        var heightProp = (isPixelHeight && w.getLayoutType() != 'absolute')? 'min-height' : 'height';
 //        w._tableBase.css({height:'', 'min-height':'', 'width': '100%', position: 'relative', 'float': 'left', overflow: 'hidden', outline: "none"});
         w._tableBase.css({position: "relative", height: '100%', 'width': '100%', 'float': 'left'});
-        base.css('padding', w.padding());
+        w.padding && base.css('padding', w.padding());
         base.css({"-ms-box-sizing": 'border-box', "-webkit-box-sizing": 'border-box',
                          "-moz-box-sizing": 'border-box', "box-sizing": 'border-box'});
 //        if ($.browser.webkit || $.browser.mozilla) {
@@ -356,7 +356,9 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
         this._table.width('100%');
         setTimeout(function(){
             //fix for Chrome browser, does not set actual height (0 by default)
-            self._table.height(self.height());
+            if (self._project){
+                self._table.height(self.height());
+            }
         }, 0);
     },
 
@@ -489,6 +491,10 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
         return value;
     },
 
+    currentContainer: function(){
+        return this.children()[0];
+    },
+
     initProps: function() {
         this._super();
         this.name = this.normalProperty('name');
@@ -497,7 +503,7 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
         this.borderRadius = this.themeProperty('borderRadius', this._borderRadius);
         this.bg = this.themeProperty('bgColor', this._bg);
 
-        this.enable = this.htmlProperty('enable', this._enable);
+        this.enable = this.htmlProperty('enable', this._updateEnable);
         this.visible = this.htmlProperty('visible', this._visible);
         this.opacity = this.themeProperty('opacity', this._opacity);
         this.readonly = this.htmlProperty('readonly', this._updateReadonly);
@@ -606,7 +612,6 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
         var Pixeltxt =  AC.Core.lang().trText( "widget_pixel" );
         var div = "<div><table align='center' valign='middle' style='height: 100%'><tr><td style='align: center'><input type='text' style='align: right'></td></tr><tr><td><table align='center' valign='top'><tr><td><form><input type='radio' value='pixel' name='wiziSelect'> " + Pixeltxt + " <input type='radio' value='percent' name='wiziSelect'> " + Percenttxt + " </form></td></tr></table></td></tr></table><div>";
         var dlg = $(div);
-        var title = title;
         var save =  AC.Core.lang().trText( "dialog_button_save" );
         var cancel =  AC.Core.lang().trText( "dialog_button_cancel" );
         var btn = {};
@@ -624,12 +629,10 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
             }
             onSaveFunc(val + addon);
             //self.sendTableLayoutProperty({"columns" : this.columns()});
-            $(this).dialog('destroy');
-            dlg.remove();
+            $(this).dialog('close');
         };
         btn[cancel] = function() {
-            $(this).dialog('destroy');
-            dlg.remove();
+            $(this).dialog('close');
         };
         var props = jQuery.extend({
                                 modal : true,
@@ -639,8 +642,7 @@ var WiziCore_UI_TableLayoutWidget = AC.Widgets.WiziCore_UI_TableLayoutWidget =  
                                 title : title,
                                 buttons: btn,
                                 close: function(event, ui) {
-                                    $(this).dialog('destroy');
-                                    dlg.remove();
+                                    $(this).dialog('destroy').remove();
                                 },
                                 dialogClass: "wa-system-dialog wa-system-style"
         }, {});

@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_SearchWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_SearchWidget = AC.Widgets.WiziCore_UI_SearchWidget =  AC.Widgets.WiziCore_UI_TextWidget.extend({
     _widgetClass: "WiziCore_UI_SearchWidget",
     _input: null,
@@ -56,11 +56,9 @@ var WiziCore_UI_SearchWidget = AC.Widgets.WiziCore_UI_SearchWidget =  AC.Widgets
         var self = this;
 
         if (this.mode() != WiziCore_Visualizer.EDITOR_MODE) {
-            var onClick = function() {
-                self.onClick.call(self);
-            };
-            this._imgBtn.click(onClick);
-            this._textBtn.click(onClick);
+            var onBtnClick = $.proxy(this.onBtnClick, this);
+            this._imgBtn.click(onBtnClick);
+            this._textBtn.click(onBtnClick);
         }
         this.base().prepend(this._inputDiv);
         this._super.apply(this, arguments);
@@ -97,6 +95,7 @@ var WiziCore_UI_SearchWidget = AC.Widgets.WiziCore_UI_SearchWidget =  AC.Widgets
         this._btnColor(this.btnColor());
         this._btnFont(this.btnFont());
         this._btnBgColor(this.btnBgColor());
+        this._updateEnable();
     },
 
     _updateLayout: function(){
@@ -141,7 +140,7 @@ var WiziCore_UI_SearchWidget = AC.Widgets.WiziCore_UI_SearchWidget =  AC.Widgets
         }
     },
 
-    onClick: function(ev) {
+    onBtnClick: function(ev) {
         var triggerEvent = new $.Event(AC.Widgets.WiziCore_UI_SearchWidget.OnSearchButton);
         var newValue = this._text();
         $(this).trigger(triggerEvent, [newValue]);
@@ -157,7 +156,7 @@ var WiziCore_UI_SearchWidget = AC.Widgets.WiziCore_UI_SearchWidget =  AC.Widgets
             //only in runtime
             this.sendDrillDown(searchValue);
         }
-
+        ev.stopPropagation();
     },
 
     sendDrillDown: function(value) {
@@ -218,6 +217,9 @@ var WiziCore_UI_SearchWidget = AC.Widgets.WiziCore_UI_SearchWidget =  AC.Widgets
     },
 
     _btnText: function(val) {
+        if (!this._textBtn)
+            return;
+
         var trVal = WiziCore_Helper.isLngToken(val) ? this._getTranslatedValue(val) : val;
         this._textBtn.val(trVal);
     },

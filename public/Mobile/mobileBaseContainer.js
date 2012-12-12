@@ -1,7 +1,7 @@
 /**
  * @lends       toolbar
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ContainerMobileWidget = AC.Widgets.WiziCore_UI_ContainerMobileWidget =  AC.Widgets.WiziCore_UI_PanelContainerWidget.extend({
     _widgetClass : "WiziCore_UI_ContainerMobileWidget",
     _currPage:null,
@@ -48,6 +48,7 @@ var WiziCore_UI_ContainerMobileWidget = AC.Widgets.WiziCore_UI_ContainerMobileWi
     onPageDrawn: function() {
         if (this.mode() == WiziCore_Visualizer.RUN_MODE) {
             this.base().css('overflow', "hidden"); // for containers overflow must be hidden
+            this._updateScrolling();
         }
         this._super.apply(this, arguments);
     }
@@ -74,7 +75,8 @@ var _props = [
         AC.Property.layout.zindex,
         AC.Property.layout.anchors,
         AC.Property.layout.alignInContainer,
-        AC.Property.layout.repeat
+        AC.Property.layout.repeat,
+        AC.Property.layout.scrolling
     ]},
     { name: AC.Property.group_names.behavior, props:[
         AC.Property.behavior.dragAndDrop,
@@ -131,7 +133,8 @@ WiziCore_UI_ContainerMobileWidget.capabilities = function() {
             pWidth: "100",
             dragAndDrop: false,
             layout: 'absolute',
-            mobileTheme: 'a'
+            mobileTheme: 'a',
+            scrolling: "none"
         },
         emptyProps: {borderRadius : "0"},
         props: WiziCore_UI_ContainerMobileWidget.props(),

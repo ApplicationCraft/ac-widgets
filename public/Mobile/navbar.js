@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_PopupDropdownMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     function findOption(target) {
         return $(target).closest('.ac-navbar-item');
     }
@@ -10,7 +10,7 @@
         var option = findOption(ev.target);
         if (option.length > 0) {
             var widget = option.data("widget");
-            widget && widget.enable() !== false && widget._itemClickCallback.call(widget, ev, option.data("optionValue"), option.data("label"), option.data("position"));
+            widget && widget.enable() !== false && widget._isParentEnable() !== false && widget._itemClickCallback.call(widget, ev, option.data("optionValue"), option.data("label"), option.data("position"));
         }
 
     }
@@ -54,14 +54,17 @@
         },
         _itemClickCallback: function(ev, optionValue, label, i) {
             this._setButtonActiveState(ev);
-            var that = this;
+            var that = this,
+                app = this.form();
             setTimeout(function(){
-                var res = that.onItemClick.call(that, label, i);
-                if (optionValue.action && res !== false){
-                    that.onActionClick(ev, optionValue.action);
+                if (app && !app.isDestroyed()){
+                    var res = that.onItemClick.call(that, label, i);
+                    if (optionValue.action && res !== false){
+                        that.onActionClick(ev, optionValue.action, app);
+                    }
                 }
                 ev.stopPropagation();
-            },30);
+            },100);
         },
         _setButtonActiveState: function(ev){
             var el = $(ev.target).closest("a");
@@ -76,9 +79,13 @@
 //        this._mainCnt = $("<div style='width:100%; height:100%;'></div>");
             this._super.apply(this, arguments);
             var self = this;
-            $(this.form()).bind(AC.Widgets.WiziCore_Api_Form.PageChanging.onShow, function(ev, page){
+            $(this.form()).bind(AC.Widgets.WiziCore_Api_Form.PageChanging.onShow+ "." + this.id(), function(ev, page){
                 self.updateActiveBtnByPage(page);
             });
+        },
+
+        onRemove: function(){
+            $(this.form()).unbind(AC.Widgets.WiziCore_Api_Form.PageChanging.onShow + "." + this.id());
         },
 
         initProps: function() {
@@ -342,8 +349,11 @@
 
         _enable: function(val) {
             if (this._mainCnt) {
-                val = (val === true) ? "enable" : "disable";
-                this._mainCnt.find(":jqmData(role='navbar')").navbar(val);
+                var method = (val === true) ? "enable" : "disable";
+                var el = this._mainCnt.find(":jqmData(role='navbar')");
+                el.data("navbar") && el.navbar(method);
+                (val !== true) ? this._mainCnt.find('.ac-navbar-item').addClass('wa-disable-cursor') : this._mainCnt.find('.ac-navbar-item').removeClass('wa-disable-cursor');
+
             }
         },
 

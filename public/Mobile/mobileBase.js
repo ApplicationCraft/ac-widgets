@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ButtonMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_BaseMobileWidget = AC.Widgets.WiziCore_UI_BaseMobileWidget =  AC.Widgets.Base.extend({
     initProps: function() {
         this._super();

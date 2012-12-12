@@ -1,7 +1,7 @@
 /**
  * @lends       RepeatContainer#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     var w = WiziCore_UI_RepeatContainerWidget = AC.Widgets.WiziCore_UI_RepeatContainerWidget = AC.Widgets.RepeatContainer = function() {
         this.init.apply(this, arguments)
     };
@@ -46,6 +46,8 @@
 
         this._setData(this._project['data']);
         this._project['data'] = null;
+        this._hidePreviousShownContainers = false;
+        this._startHidingContainersPosition = 0;
     };
     proto.project = function(json) {
         var retVal = w._sc.project.apply(this, arguments);
@@ -136,8 +138,8 @@
         if (children.length != 0) {
             containerObj = children[0];
         } else {
-            var propsDefault = AC.Core.Widgets().getDefaultWidgetProperties("WiziCore_Widget_Container");
-            containerObj = this.addNewWidget({widgetClass: "WiziCore_Widget_Container", project: propsDefault});
+            var propsDefault = AC.Core.Widgets().getDefaultWidgetProperties("ContainerForRepeater");
+            containerObj = this.addNewWidget({widgetClass: "ContainerForRepeater", project: propsDefault});
             containerObj.prop({width: this.width(), height: this.height(), x: 0, y: 0});
         }
         containerObj.isDraggable = this;
@@ -243,6 +245,10 @@
      */
     proto._scrolling = function(value) {
         this.checkScroll();
+    };
+
+    proto._updateScrolling = function(){
+        //it's a cap for block scrolling from container class
     };
 
     proto.checkScroll = function() {
@@ -354,6 +360,8 @@
 
         var self = this;
 
+        container.__dataDrawn = false;
+
         container._hideByRepeatContainer = function(){
             this.tableBase().hide();
             if (this._separatorLine){
@@ -384,8 +392,8 @@
             this.__repeat_callBGPropChange && (this.__repeat_bgSetManual = true);
         };
 
-        var oldRemove = container.remove;
-        container.remove = function(){
+        var oldRemove = container.onRemove;
+        container.onRemove = function(){
             if (this._separatorLine) {
                 this._separatorLine.remove();
             }
@@ -544,6 +552,7 @@
         var clonedCh = this._clonedChildren;
             for (var i = 0, l = clonedCh.length; i < l; i++){
                 clonedCh[i]._hideByRepeatContainer();
+                clonedCh[i].__dataDrawn = false;
             }
     };
 
@@ -662,12 +671,30 @@
             l = this.getClonedLength(),
             children = this._clonedChildren;
         for (var i = 0; i < l; i++) {
-            if (children[i]._isDrawn == false) {
+            if (children[i].__dataDrawn == false) {
                 ret = false;
                 break;
             }
         }
+        if (l == 0){
+            ret = false;
+        }
         return ret;
+    };
+
+    proto.hidePreviousShownContainers = function(flag){
+        if (flag !== undefined){
+            if (flag === true){
+                this._hidePreviousShownContainers = true;
+            } else {
+                if (this._hidePreviousShownContainers && this._startHidingContainersPosition == null){
+                    //should be changed
+                    this._startHidingContainersPosition = this.startPosition();
+                }
+                this._hidePreviousShownContainers = false;
+            }
+        }
+        return this._hidePreviousShownContainers;
     };
 
     proto._redrawElements = function() {
@@ -708,6 +735,7 @@
                         }
                         //if container was hidden, show him
                         container._visible(container.visible());
+                        container.__dataDrawn = true;
                         if (needSeparator) {
                             if (!container._separatorLine){
                                 container._separatorLine = separatorDiv.clone();
@@ -759,13 +787,19 @@
                 //hide unused containers, don't destroy, just hide
                 var prevClear = Math.max((start - perPage), 0),
                     nextClear = Math.min((stop + perPage), clonedContainers.length - 1);
-//                for (i = prevClear; i < start; i++){
-//                    clonedContainers[i]._hideByRepeatContainer();
-//                }
-//
-//                for (i = stop + 1; i <= nextClear; i++){
-//                    clonedContainers[i]._hideByRepeatContainer();
-//                }
+                if (this._hidePreviousShownContainers){
+                    if (this._startHidingContainersPosition != null){
+                        prevClear = this._startHidingContainersPosition;
+                        this._startHidingContainersPosition = null;
+                    }
+                    for (i = prevClear; i < start; i++){
+                        clonedContainers[i]._hideByRepeatContainer();
+                    }
+
+                    for (i = stop + 1; i <= nextClear; i++){
+                        clonedContainers[i]._hideByRepeatContainer();
+                    }
+                }
             }
             callF(start, stop);
 
@@ -796,7 +830,10 @@
     };
 
     proto._getData = function() {
-        var containerChildren = this._container.children();
+        var containerChildren = [];
+        this._container.traverseChildren(function(child){
+            containerChildren.push(child);
+        });
 
         var result = {}, i, l, field;
 
@@ -1110,6 +1147,13 @@
         this._drawClonedContainers();
     };
 
+    proto.onDestroy = function() {
+        var container = this._clonedChildren;
+        for(var i =0, l = container.length; i < l ; ++i) {
+            container[i].destroy();
+        }
+    };
+
     proto.insertRow = function(pos, rowData) {
         // create container, insert it
         rowData = (rowData == undefined) ? {} : rowData;
@@ -1301,7 +1345,7 @@
             AC.Property.layout.verticalSpacing,
             AC.Property.layout.horizontalSpacing,
             AC.Property.layout.repeatMode,
-            AC.Property.layout.scrolling,
+            AC.Property.layout.repeatScrolling,
             AC.Property.layout.stretching,
             AC.Property.layout.separatingLines,
             AC.Property.layout.hideLastLine,

@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_SliderMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_SliderMobileWidget = AC.Widgets.WiziCore_UI_SliderMobileWidget =  AC.Widgets.WiziCore_UI_BaseMobileWidget.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple ,{
     _widgetClass: "WiziCore_UI_SliderMobileWidget",
     _slider: null,
@@ -40,6 +40,9 @@ var WiziCore_UI_SliderMobileWidget = AC.Widgets.WiziCore_UI_SliderMobileWidget =
         this._slider = $('<input data-role="slider" type="number" value="' + this.value() + '" min="' + this.min() + '" max="' + this.max() + '"/>');
         this._slider.attr("id", 'slider' + htmlId);
 
+        if (this.step() != undefined)
+            this._slider.attr("step", this.step());
+
         this._div.append(this._slider);
         this._cnt.prepend(this._div);
 
@@ -64,17 +67,15 @@ var WiziCore_UI_SliderMobileWidget = AC.Widgets.WiziCore_UI_SliderMobileWidget =
         slider.unbind("touchstart.custom").bind("touchstart.custom", {self: self}, self.onStart);
     },
 
-    destroy: function() {
+    onDestroy: function() {
         if (this._slider) {
-            this._slider.unbind("change.custom", {self: this}, this.onSlide);
+            this._slider.unbind();
             var slider = this.base().find(".ui-slider");
-            slider.unbind("mousedown.custom");
-            slider.unbind("touchstart.custom");
+            slider.unbind();
         }
         var htmlid = this.htmlId();
         $(document).unbind("mouseup." + htmlid);
         $(document).unbind("touchend." + htmlid);
-        this._super();
     },
 
     initProps: function() {
@@ -93,6 +94,7 @@ var WiziCore_UI_SliderMobileWidget = AC.Widgets.WiziCore_UI_SliderMobileWidget =
 
         this.max = this.checkedPropTemplate('max');
         this.min = this.checkedPropTemplate('min');
+        this.step = this.htmlProperty('step', this._step);
         this.value = this.htmlProperty('mobileSliderValue', this._value);
 
         this.view = this.normalProperty('view');
@@ -201,6 +203,10 @@ var WiziCore_UI_SliderMobileWidget = AC.Widgets.WiziCore_UI_SliderMobileWidget =
         this._updateSlider();
     },
 
+    _shadow: function(val){
+        this._super(val, this._slider);
+    },
+
     _updateSlider: function(ev){
         var self = this;
         if (ev != undefined){
@@ -239,10 +245,12 @@ var WiziCore_UI_SliderMobileWidget = AC.Widgets.WiziCore_UI_SliderMobileWidget =
         if (!this._slider)
             return;
 
-        if (flag)
-            this._slider.mobileSlider('enable');
-        else {
-            this._slider.mobileSlider('disable');
+        if (this._slider.data("mobileSlider")){
+            if (flag)
+                this._slider.mobileSlider('enable');
+            else {
+                this._slider.mobileSlider('disable');
+            }
         }
     },
 
@@ -306,19 +314,26 @@ var WiziCore_UI_SliderMobileWidget = AC.Widgets.WiziCore_UI_SliderMobileWidget =
     _enable: function(val){
         if (this._slider){
             val = (val === true) ? "enable" : "disable";
-            this._slider.mobileSlider(val);
+            this._slider.data("mobileSlider") && this._slider.mobileSlider(val);
         }
     },
 
     reDraw: function(){
         if (this._slider){
-            this._slider.mobileSlider("refresh");
+            this._slider.data("mobileSlider") && this._slider.mobileSlider("refresh");
         }
     },
 
     _max: function(val) {
         if (this._isDrawn) {
             this._slider.attr("max", val);
+            this.reDraw();
+        }
+    },
+
+    _step: function(val) {
+        if (this._isDrawn && val) {
+            this._slider.attr("step", val);
             this.reDraw();
         }
     },
@@ -385,6 +400,7 @@ var _props = [
         AC.Property.general.name,
         AC.Property.general.max,
         AC.Property.general.min,
+        {name: "step", type : "_1to500", get: "step", set: "step", alias: "widget_step"},
         AC.Property.general.mobileSliderValue
     ]},
     { name: AC.Property.group_names.database, props: [

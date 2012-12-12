@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     var w = AC.Widgets.Mobiscroll = function() {
         this.init.apply(this, arguments);
     };
@@ -103,6 +103,10 @@
         //this._redraw();
     };
 
+    p._shadow = function(val){
+        w._sc._shadow.apply(this, [val, this._input]);
+    };
+
     p._updateWidthOfInput = function(){
         var inp = this._input;
         if (inp){
@@ -120,8 +124,7 @@
         this._updateWidthOfInput();
     };
 
-    p.destroy = function() {
-        w._sc.destroy.call(this);
+    p.onDestroy = function() {
         if (this._input)
             this._input.scroller('destroy');
     };
@@ -183,6 +186,7 @@
         if (this._input) {
             val = (val === true) ? "enable" : "disable";
             this._input.scroller(val);
+            this._input.textinput(val);
         }
     };
 
@@ -523,6 +527,7 @@
             name: "mobiscroll1",
             opacity: 1,
             customCssClasses: "",
+            widgetStyle: "default",
             dragAndDrop: false, resizing: false,
             alignInContainer: 'left',
             mobileTheme: 'c',

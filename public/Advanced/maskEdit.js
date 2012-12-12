@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_MaskEditWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_MaskEditWidget = AC.Widgets.WiziCore_UI_MaskEditWidget =  AC.Widgets.WiziCore_UI_TextWidget.extend({
     _widgetClass : "WiziCore_UI_MaskEditWidget",
     _input: null,

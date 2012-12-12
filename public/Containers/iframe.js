@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_IFrameWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_IFrameWidget = AC.Widgets.WiziCore_UI_IFrameWidget =  AC.Widgets.Base.extend({
     _widgetClass : "WiziCore_UI_IFrameWidget",
     _dataPropName : "iframeUrl",
@@ -81,6 +81,10 @@ var WiziCore_UI_IFrameWidget = AC.Widgets.WiziCore_UI_IFrameWidget =  AC.Widgets
     },
 
     getDataWithoutIFrame: function(src){
+        //don't exec if src == "" or undefined
+        if (src == "" || typeof src != "string"){
+            return;
+        }
         var self = this;
         var wc = this.context().webClient();
         wc["httpRequest"].call(wc, src, "GET", function(res, error){

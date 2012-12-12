@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_SliderHWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_SliderHWidget = AC.Widgets.WiziCore_UI_SliderHWidget =  AC.Widgets.WiziCore_UI_SliderWidget.extend({
     _widgetClass: "WiziCore_UI_SliderHWidget"
 });

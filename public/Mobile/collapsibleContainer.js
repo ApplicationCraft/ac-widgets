@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ButtonMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_CollapsibleMobileWidget = AC.Widgets.WiziCore_UI_CollapsibleMobileWidget = AC.Widgets.WiziCore_UI_PanelContainerWidget.extend({
     _widgetClass : "WiziCore_UI_CollapsibleMobileWidget",
     _childrenDiv: null,
@@ -175,6 +175,9 @@ var WiziCore_UI_CollapsibleMobileWidget = AC.Widgets.WiziCore_UI_CollapsibleMobi
 //                if (self.mode() == WiziCore_Visualizer.EDITOR_MODE && !self.selected) {
 //                    return;
 //                }
+            if ($(this).hasClass('ui-state-disabled'))
+                return;
+
             var type = self._collapsibleHeading.is(".m-ui-collapsible-heading-collapsed") ?
                     "expand": "collapse";
 
@@ -186,6 +189,18 @@ var WiziCore_UI_CollapsibleMobileWidget = AC.Widgets.WiziCore_UI_CollapsibleMobi
 
             event.preventDefault();
         });
+    },
+
+    _enable: function(val) {
+        if (this._collapsibleHeading) {
+            if (val === false){
+                this._collapsibleHeading.addClass('ui-state-disabled');
+                this._collapsibleHeading.find('.m-ui-btn').css('cursor', 'default');
+            } else {
+                this._collapsibleHeading.removeClass('ui-state-disabled');
+                this._collapsibleHeading.find('.m-ui-btn').css('cursor', '');
+            }
+        }
     },
 
     _highlightExpanded: function(val) {
@@ -278,7 +293,7 @@ var WiziCore_UI_CollapsibleMobileWidget = AC.Widgets.WiziCore_UI_CollapsibleMobi
     },
 
     currentContainer: function() {
-        return this.parent();
+        return this.children()[0];
     }
 });
 var _props = [

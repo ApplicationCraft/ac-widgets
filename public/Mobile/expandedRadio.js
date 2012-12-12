@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_ExpandedRadioMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_ExpandedRadioMobileWidget = AC.Widgets.WiziCore_UI_ExpandedRadioMobileWidget =  AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.extend({
     _widgetClass: "WiziCore_UI_ExpandedRadioMobileWidget",
     _radioInputs: null,
@@ -54,12 +54,18 @@ var WiziCore_UI_ExpandedRadioMobileWidget = AC.Widgets.WiziCore_UI_ExpandedRadio
         div.attr("id", expRadioId);
         this._div = div;
 
-        var controlGroup = $("<fieldset data-role='controlgroup'/>");
+        var controlGroup = $("<div data-role='controlgroup' style='width:100%'/>");
         this._controlGroup = controlGroup;
         var firstInputName = "";
         this._radioInputs = [];
         if (val){
-            for (var i = 0; i < val.length; ++i) {
+            var i = 0, l = val.length;
+            if (this._isDataManual != undefined){
+                var res = this._getStartAndLength(l);
+                i = res.i;
+                l = res.l;
+            }
+            for (; i < l; ++i) {
                 var elName = (val[i][0]) ? "" + val[i][0].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&") : "";
                 elName = WiziCore_Helper.isLngToken(elName) ? this._getTranslatedValue(elName) : elName;
 
@@ -106,6 +112,9 @@ var WiziCore_UI_ExpandedRadioMobileWidget = AC.Widgets.WiziCore_UI_ExpandedRadio
     },
 
     _redraw: function() {
+        if (!this._mainCnt)
+            return;
+
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
         this._dataRedraw(this._project['data']);
@@ -237,11 +246,18 @@ var WiziCore_UI_ExpandedRadioMobileWidget = AC.Widgets.WiziCore_UI_ExpandedRadio
             inputs[0].attr('checked', true);
         }
         if (this._isDrawn) {
+            var input;
             for (var i = 0, l = inputs.length; i < l; i++){
-                $(inputs[i]).checkboxradio("refresh");
+                input = $(inputs[i]);
+                input.data("checkboxradio") && input.checkboxradio("refresh");
             }
         }
     },
+
+    _shadow: function(val){
+        this._super(val, this._controlGroup);
+    },
+
 
     collectDataSchema: function(dataSchema) {
         if (!this.isIncludedInSchema()) {
@@ -304,7 +320,8 @@ var WiziCore_UI_ExpandedRadioMobileWidget = AC.Widgets.WiziCore_UI_ExpandedRadio
     _enable: function(val) {
         if (this._controlGroup) {
             val = (val === true) ? "enable" : "disable";
-            this._controlGroup.find("input").checkboxradio(val);
+            var inpt = this._controlGroup.find("input");
+            inpt.data("checkboxradio") && inpt.checkboxradio(val);
         }
     },
 

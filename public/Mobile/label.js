@@ -1,4 +1,4 @@
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_LabelMobileWidget = AC.Widgets.WiziCore_UI_LabelMobileWidget =  AC.Widgets.WiziCore_UI_BaseMobileWidget.extend($.extend({}, WiziCore_WidgetAbstract_DataIntegrationSimple, WiziCore_Methods_Widget_ActionClick, {
     _labelDiv: null,
     _widgetClass: "WiziCore_UI_LabelMobileWidget",
@@ -25,10 +25,12 @@ var WiziCore_UI_LabelMobileWidget = AC.Widgets.WiziCore_UI_LabelMobileWidget =  
     },
 
     onClick: function(ev) {
-        var triggerEvent = new jQuery.Event(AC.Widgets.WiziCore_Widget_Base.onClick);
+        var triggerEvent = new jQuery.Event(AC.Widgets.WiziCore_Widget_Base.onClick),
+            pageJump = this.pageJump(),
+            app = this.form();
         acDebugger.systemLog("triggerEvent", triggerEvent, "self.id()", this.id());
         $(this).trigger(triggerEvent, [ev]);
-        (!triggerEvent.isPropagationStopped()) && this.onActionClick(ev, this.pageJump());
+        (!triggerEvent.isPropagationStopped()) && this.onActionClick(ev, pageJump, app);
         ev.stopPropagation();
     },
 
@@ -188,6 +190,13 @@ var WiziCore_UI_LabelMobileWidget = AC.Widgets.WiziCore_UI_LabelMobileWidget =  
 
     getDataModel: function() {
         return this._labelDataModel();
+    },
+
+    appendValueToDataObject: function(dataObject, invalidMandatoryWidgets, force, includeLabels) {
+        if (!includeLabels) {
+            return;
+        }
+        return this._simpleDataObjectValue(dataObject, force);
     },
 
     isBindableToData: function() {

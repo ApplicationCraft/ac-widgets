@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_PopupListboxMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
 var WiziCore_UI_PopupListboxMobileWidget = AC.Widgets.WiziCore_UI_PopupListboxMobileWidget =  AC.Widgets.WiziCore_UI_PopupDropdownMobileWidget.extend({
     _widgetClass: "WiziCore_UI_PopupListboxMobileWidget",
     _select: null,
@@ -28,24 +28,10 @@ var WiziCore_UI_PopupListboxMobileWidget = AC.Widgets.WiziCore_UI_PopupListboxMo
         this._tabindex(this.tabindex());
     },
 
-    _beforeLabel: function(text) {
-        if (this.form().language() != null && !this.form()._skipTokenCreation) {
-            var isToken = WiziCore_Helper.isLngToken(text),
-                token = isToken ? text : ('ac-' + this.id());
-
-            if (!isToken)
-                this.form().addTokenToStringTable(this.id(), this.name(), token, text);
-
-            return token;
-        } else
-            return text;
-    },
-
-    _label: function() {
-        this._redraw();
-    },
-
     _data: function(val) {
+        if (!this._mainCnt)
+            return;
+
         var trState = jQuery.fn.__useTr ;
         jQuery.fn.__useTr = false;
 
@@ -72,9 +58,7 @@ var WiziCore_UI_PopupListboxMobileWidget = AC.Widgets.WiziCore_UI_PopupListboxMo
         if (!WiziCore_Helper.isMobile()){
             select.append($("<option>" + this.label() + "</option>"));
         }
-        else {
-            this.placeholder = this.label();
-        }
+        this.placeholder = this.label();
         var i = 0, l = val ? val.length : 0;
         if (this._isDataManual != undefined){
             var res = this._getStartAndLength(l);
@@ -105,13 +89,28 @@ var WiziCore_UI_PopupListboxMobileWidget = AC.Widgets.WiziCore_UI_PopupListboxMo
         this.addEvents(AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.onChange);
         jQuery.fn.__useTr = trState;
     },
-    _getJQMOptions : function() {
-         var options = this._super();
-         if (this.placeholder) {
-             options['usePlaceholder'] = this.placeholder ;
-         }
-        return options;
+
+    /**
+     * Function call, then to elements bind event
+     * @param {String} event type of event
+     * @private
+     */
+    addEvents: function(event) {
+        if (this._select == null) {
+            return;
+        }
+
+        switch (event) {
+            case AC.Widgets.WiziCore_UI_SingleSelectMobileWidget.onChange:
+                var evName = (WiziCore_Helper.isMobile())? "change" : "close";
+                this._select.bind(evName, {self: this}, this.onChange);
+                break;
+
+            default:
+                break;
+        }
     },
+
     /**
      * On onChange event
      */
@@ -226,16 +225,16 @@ var WiziCore_UI_PopupListboxMobileWidget = AC.Widgets.WiziCore_UI_PopupListboxMo
     },
 
     _tabindex: function(value) {
-        this._super(value, this.base().find('a'));
+        this._super(value, this._btnDiv);
     },
 
     _tabStop: function(val) {
-        this._super(val, this.base().find('a'));
+        this._super(val, this._btnDiv);
     },
 
     setFocus: function() {
         if (this._isDrawn && this.mode() != WiziCore_Visualizer.EDITOR_MODE) {
-            this.base().find('a').focus();
+            this._btnDiv.focus();
         }
     },
 
@@ -279,10 +278,10 @@ var WiziCore_UI_PopupListboxMobileWidget = AC.Widgets.WiziCore_UI_PopupListboxMo
                     .removeAttr('selected')
                     .each(function(ind, el){
                 if (indexes[$(el).attr("data-index")]){
-                    $(el).attr('selected', 'selected');
+                    $(el).attr('selected', true);
                 }
             });
-            this._select.selectmenu("refresh");
+            this._select.data("selectmenu") && this._select.selectmenu("refresh");
         }
     },
 

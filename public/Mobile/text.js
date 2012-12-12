@@ -1,7 +1,7 @@
 /**
  * @lends       WiziCore_UI_TextMobileWidget#
  */
-(function($, windows, document, undefined){
+(function($, window, document, undefined){
     var w = WiziCore_UI_TextMobileWidget = AC.Widgets.WiziCore_UI_TextMobileWidget = AC.Widgets.WiziCore_UI_TextMobileWidget = AC.Widgets.TextMobile = function() {
         this.init.apply(this, arguments);
     };
@@ -107,9 +107,8 @@
 //        }
     };
 
-    p.destroy = function() {
-        $(this._input).unbind('change.custom');
-        w._sc.destroy.call(this);
+    p.onDestroy = function() {
+        this._input && $(this._input).unbind();
     };
 
     p.initDomState = function() {
@@ -142,6 +141,9 @@
         this._maxChars(this.maxChars());
     };
 
+    p._shadow = function(val, div){
+        w._sc._shadow.call(this, val, div || this._input);
+    };
     /**
      * Function call, then to elements bind event
      * @param {String} event type of event
@@ -258,11 +260,14 @@
 //    },
 
     p._text = function(text) {
-        if (text !== undefined) {
+        if (text !== undefined && this._input) {
             this._input.val(text);
             this._checkTextWithPlaceholder(text);
         }
-        var ret = this._input.val();
+        var ret;
+        if (this._input){
+            ret = this._input.val();
+        }
         ret = this._updateTextWithPlaceholder(ret);
         return ret;
     };
@@ -290,7 +295,7 @@
     p._enable = function(val) {
         if (this._input) {
             val = (val === true) ? "enable" : "disable";
-            this._input.textinput(val);
+            this._input.data("textinput") && this._input.textinput(val);
         }
     };
 
@@ -300,82 +305,115 @@
 
     p._maxChars = function(val) {
         if (this._input){
-            var input = this._input;
-            if (!WiziCore_Helper.isAndroid4()){
-                //max length attribute breaks input work on android4
-                input.removeAttr("maxlength");
-                val = (val == "") ? undefined : val;
-                if (val != undefined){
-                    input.attr("maxlength", val);
-                }
-            }
+            var self = this,
+                isAndroid4 = WiziCore_Helper.isAndroid4(),
+                input = this._input,
+                allowChars = [],//["1","2","3","4","5","6","7","8","9","0", "."],
+                oneSymbChar = [],//["."],
+                parseText;
+
+//            if (!isAndroid4){
+//                //max length attribute breaks input work on android4
+//                input.removeAttr("maxlength");
+//                val = (val == "") ? undefined : val;
+//                if (val != undefined){
+//                    input.attr("maxlength", val);
+//                }
+//            }
+
+
             input.removeAttr("pattern");
             input.unbind(".maxlen");
-            if (this.mobileTextType() == "number"){
-                var self = this;
-                input.attr("pattern", "[0-9\.]*");
-                input.bind("keydown.maxlen", function(event){
-                    if (event.which == 8){
-                        self._symbCounter > 0 ? self._symbCounter-- : null;
-                    }
-                });
-                var dot = 44;
-                if (WiziCore_Helper.isAndroid4()){
-                    //android 4 don't allow , in number
-                    dot = 46;
-                }
-                input.bind("keypress.maxlen", function(event){
-                    var text = $(this).val();
-                    var len = text.length;
-                    if (text == self._project['text']){
-                        self._symbCounter = len;
-                    }
-                    var isAllow = false;
-                    if (len < (0 + val) || val == undefined){
-                        //prevent input more than maxChars on IOS
-                        var allowKeys = [8,9,13,27,dot,48,49,50,51,52,53,54,55,56,57];
-                        //48-57 numeric others are keys Esc, arrows etc.
 
-                        for (var key in allowKeys){
-                            if (event.which == allowKeys[key]){
-                                isAllow = true;
-                            }
-                        }
-                        if (isAllow){
-                            if (len == 0){
-                                self._symbCounter = 0;
-                                self._dotUsed = false;
-                                if (event.which == dot){
-                                    isAllow = false;
-                                }
-                            }
-                            if (len == 1 && text[text.length - 1] == "0"){
-                                //self._symbCounter = 1;
-                                //console.log("symbcounter=1");
-                                if (event.which != dot && !self._dotUsed){
-                                    isAllow = false;
-                                } else{
-                                    self._dotUsed = true;
-                                }
-                            }
-                            if (isAllow){
-                                if (event.which == 8){
-                                    self._symbCounter > 0 ? self._symbCounter-- : null;
-                                } else if (event.which != 9 && event.which != 13 && event.which != 27){
-                                    self._symbCounter < (1 + val) ? self._symbCounter++ : null;
-                                }
-                                if (self._symbCounter == (1 + val)){
-                                    self._symbCounter--;
-                                    isAllow = false;
-                                }
-                            }
+            if (this.mobileTextType() == "number"){
+                input.attr("pattern", "[0-9\.]*");
+                allowChars = ["1","2","3","4","5","6","7","8","9","0","."];
+                oneSymbChar = ["."];
+                if (!isAndroid4){
+                    oneSymbChar.push(",");
+                    allowChars.push(",");
+                }
+            }
+
+            function getSelection(el){
+                var end = 0, begin = 0,
+                    selText = "";
+                if (el.setSelectionRange) {
+                    begin = el.selectionStart;
+                    end = el.selectionEnd;
+                } else if (document.selection && document.selection.createRange) {
+                    var range = document.selection.createRange();
+                    begin = 0 - range.duplicate().moveStart('character', -100000);
+                    end = begin + range.text.length;
+                }
+                selText = $(el).val().substring(begin, end);
+                return {length: (end - begin), text: selText};
+            }
+
+            function checkForMaxChars(el){
+                var newVal = $(el).val();
+                if (val && newVal && (newVal.length > val)){
+                    $(el).val(newVal.substring(0, val));
+                }
+            }
+
+            function checkAllowChars(allowChars, parseText, code){
+                var allow = true;
+                if (allowChars.length > 0){
+                    for (var i = 0, l = parseText.length; i < l; i++){
+                        if ($.inArray(parseText.charAt(i), allowChars) == -1){
+                            allow = false;
                         }
                     }
-                    if (!isAllow){
-                        event.preventDefault();
+                }
+                return allow;
+            }
+
+            function checkOneSymb(text, el){
+                var allow = true,
+                    i,l,
+                    selText = getSelection(el).text,
+                    founded = 0;
+                if (oneSymbChar.length > 0){
+                    for (i = 0, l = text.length; i < l; i++){
+                        if ($.inArray(text.charAt(i), oneSymbChar) >= 0){
+                            founded++;
+                        }
+                    }
+                    for (i = 0, l = oneSymbChar.length; i < l; i++){
+                        if (selText.indexOf(oneSymbChar[i]) >=0 ){
+                            //if one symb in selected range, drop founded
+                            founded--;
+                        }
+                    }
+                    (founded > 1) && (allow = false);
+                }
+                return allow;
+            }
+
+            input.bind("blur.maxlen keyup.maxlen", function(event){
+                checkForMaxChars(this);
+            }).bind("keypress.maxlen", function(ev){
+                    var chars = $(this).val();
+                    var charCode = (ev.charCode !== undefined) ? ev.charCode : ev.which,
+                        systemChars = [0,8];//0 - all manipulate, 8 - backspace
+                    if (charCode && $.inArray(charCode, systemChars) == -1){
+                        //create string with typed chars
+                        chars += (String.fromCharCode(charCode));
+                    }
+
+                    var allow = checkAllowChars(allowChars, chars),
+                        oneUsed = checkOneSymb(chars, this);
+
+                    if (!allow || !oneUsed){
+                        ev.preventDefault();
+                    } else if (getSelection(this).length == 0){
+                        if (val && chars && chars.length > val){
+                            ev.preventDefault();
+                        }
                     }
                 });
-            }
+
         }
     };
 
